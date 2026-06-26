@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Product Playbook</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F5F0;--surface:#FFF;--border:#E4E0D8;--border-strong:#C8C3B8;
+  --text:#1A1816;--muted:#7A756C;--faint:#B0AA9F;
+  --accent:#1D6A4A;--accent-light:#E8F4EE;--done-line:#9FD9C0;
+  --p1:#D4E9F7;--p1t:#1A4A6E;--p2:#C8EDE0;--p2t:#0D5038;
+  --p3:#FDECC8;--p3t:#6B4200;--p4:#FAD9CC;--p4t:#7A2E14;
+  --p5:#DDD9F8;--p5t:#3A2F8A;--p6:#C8EDE0;--p6t:#0D5038;
+  --p7:#FDECC8;--p7t:#6B4200;--p8:#FAD9CC;--p8t:#7A2E14;
+  --p9:#D4E9F7;--p9t:#1A4A6E;--p10:#DDD9F8;--p10t:#3A2F8A;--p18:#D4E9F7;--p18t:#1A4A6E;--p19:#C8EDE0;--p19t:#0D5038;--p20:#FDECC8;--p20t:#6B4200;--p21:#FAD9CC;--p21t:#7A2E14;--p11:#D4E9F7;--p11t:#1A4A6E;--p12:#C8EDE0;--p12t:#0D5038;--p13:#FDECC8;--p13t:#6B4200;--p14:#FAD9CC;--p14t:#7A2E14;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:2rem 1rem 4rem;position:relative}
+.container{max-width:740px;margin:0 auto;position:relative}
+header{margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+header h1{font-family:'DM Serif Display',serif;font-size:2rem;font-weight:400;letter-spacing:-.02em;line-height:1.1;margin-bottom:.25rem}
+header p{font-size:.8rem;color:var(--muted);font-weight:300}
+.save-bar{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.save-indicator{font-size:.72rem;color:var(--faint);font-style:italic;transition:color .3s}
+.save-indicator.saved{color:var(--accent)}
+.btn-sm{font-size:.75rem;font-family:'DM Sans',sans-serif;background:none;border:1px solid var(--border-strong);border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:5px;transition:background .15s,color .15s;white-space:nowrap}
+.btn-sm:hover{background:var(--border);color:var(--text)}
+.btn-sm.danger:hover{background:#FEE2E2;border-color:#FCA5A5;color:#991B1B}
+.progress-section{margin-bottom:1.5rem}
+.progress-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem}
+.progress-label{font-size:.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.progress-count{font-size:.8rem;color:var(--muted);font-weight:300}
+.progress-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1);width:0%}
+.complete-banner{display:none;align-items:center;gap:10px;background:var(--accent-light);border:1px solid var(--done-line);border-radius:8px;padding:.75rem 1rem;margin-bottom:1.5rem;font-size:.875rem;color:var(--accent);font-weight:500}
+.chapter-label{font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:1.75rem 0 .5rem;padding-bottom:.35rem;border-bottom:1px solid var(--border)}
+.phase{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;transition:border-color .2s}
+.phase:hover{border-color:var(--border-strong)}
+.phase-head{display:flex;align-items:center;gap:12px;padding:.875rem 1rem;cursor:pointer;user-select:none;-webkit-user-select:none}
+.phase-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:500;flex-shrink:0;transition:background .25s,color .25s}
+.phase-info{flex:1;min-width:0}
+.phase-name{font-size:.88rem;font-weight:500;line-height:1.3}
+.phase-sub{font-size:.72rem;color:var(--muted);font-weight:300;margin-top:1px}
+.phase-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.phase-count{font-size:.72rem;color:var(--faint)}
+.phase-chev{color:var(--faint);transition:transform .22s}
+.phase-chev.open{transform:rotate(180deg)}
+.phase-body{display:none;border-top:1px solid var(--border);padding:.625rem .875rem .875rem}
+.phase-body.open{display:block}
+.section-divider{font-size:.67rem;font-weight:500;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);padding:.75rem .5rem .3rem}
+.task{display:flex;align-items:flex-start;gap:10px;padding:.45rem .5rem;border-radius:8px;transition:background .15s}
+.task:hover{background:var(--bg)}
+.cb{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px;transition:background .18s,border-color .18s}
+.cb.checked{background:var(--accent);border-color:var(--accent)}
+.cb svg{opacity:0;transition:opacity .15s}
+.cb.checked svg{opacity:1}
+.task-text{flex:1;min-width:0;cursor:pointer}
+.task-title{font-size:.83rem;font-weight:500;line-height:1.4}
+.task-desc{font-size:.76rem;color:var(--muted);line-height:1.5;margin-top:2px;font-weight:300}
+.task.done .task-title{color:var(--faint);text-decoration:line-through}
+.task.done .task-desc{color:var(--faint)}
+.open-btn{background:none;border:none;cursor:pointer;color:var(--faint);padding:2px 4px;border-radius:5px;display:flex;align-items:center;transition:color .15s,background .15s;flex-shrink:0;margin-top:1px}
+.open-btn:hover{color:var(--accent);background:var(--accent-light)}
+.tip-box{display:flex;gap:8px;align-items:flex-start;background:var(--bg);border-radius:7px;padding:.5rem .75rem;margin-top:.5rem;font-size:.74rem;color:var(--muted);font-weight:300;line-height:1.5}
+.footer-row{display:flex;align-items:center;justify-content:space-between;margin-top:2rem;padding-top:1.25rem;border-top:1px solid var(--border);flex-wrap:wrap;gap:.5rem}
+.footer-note{font-size:.72rem;color:var(--faint);font-style:italic;font-family:'DM Serif Display',serif}
+/* Modal */
+
+
+
+@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;padding:1.25rem 1.5rem 0;gap:1rem}
+.modal-title{font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:400;letter-spacing:-.01em;line-height:1.2}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--faint);padding:4px;border-radius:6px;transition:color .15s,background .15s;flex-shrink:0}
+.modal-close:hover{color:var(--text);background:var(--bg)}
+.modal-body{padding:1rem 1.5rem 1.5rem;max-height:80vh;overflow-y:auto}
+.modal-why{font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;font-weight:300;border-left:2px solid var(--border);padding-left:.875rem}
+.modal-section-title{font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:1.25rem 0 .6rem}
+.modal-section-title:first-of-type{margin-top:0}
+.graphic{background:var(--bg);border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.graphic svg{width:100%;height:auto;display:block}
+/* Tool styles */
+.tool-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem}
+.tool-cell{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem}
+.tool-cell-label{font-size:.67rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
+.tool-cell textarea{width:100%;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);line-height:1.5;resize:none;min-height:70px}
+.tool-cell textarea::placeholder{color:var(--faint)}
+.swot-s .tool-cell-label{color:#1D6A4A}
+.swot-w .tool-cell-label{color:#9A3412}
+.swot-o .tool-cell-label{color:#1A4A6E}
+.swot-t .tool-cell-label{color:#6B4200}
+.tool-grid-4{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem}
+.checklist-item{display:flex;align-items:flex-start;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--border)}
+.checklist-item:last-child{border:none}
+.checklist-item input[type=checkbox]{margin-top:3px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+.checklist-item label{font-size:.8rem;color:var(--text);line-height:1.4;cursor:pointer}
+.kano-row{display:grid;grid-template-columns:130px 1fr 90px;gap:8px;align-items:center;padding:.45rem .65rem;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:5px}
+.kano-row input[type=text]{background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.kano-row select{font-family:'DM Sans',sans-serif;font-size:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 6px;color:var(--text)}
+.add-row-btn{font-size:.75rem;color:var(--accent);background:none;border:1px dashed var(--done-line);border-radius:7px;padding:.4rem .75rem;cursor:pointer;width:100%;font-family:'DM Sans',sans-serif;margin-top:4px;transition:background .15s}
+.add-row-btn:hover{background:var(--accent-light)}
+.scoring-row{display:grid;grid-template-columns:1fr 90px 90px 70px;gap:8px;align-items:center;padding:.45rem .65rem;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:5px}
+.scoring-row input[type=text]{background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.scoring-row select{font-family:'DM Sans',sans-serif;font-size:.73rem;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 4px;color:var(--text)}
+.score-badge{font-size:.75rem;font-weight:500;text-align:center;border-radius:5px;padding:3px 6px;background:var(--border);color:var(--muted)}
+.score-badge.high{background:#D1FAE5;color:#065F46}
+.score-badge.med{background:#FEF3C7;color:#92400E}
+.score-badge.low{background:#FEE2E2;color:#991B1B}
+.hyp-field label{font-size:.72rem;font-weight:500;color:var(--muted);display:block;margin-bottom:.25rem;margin-top:.75rem}
+.hyp-field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;font-family:'DM Sans',sans-serif;font-size:.82rem;color:var(--text);line-height:1.6;resize:none;padding:.65rem;min-height:64px;transition:border-color .2s}
+.hyp-field textarea:focus{border-color:var(--accent)}
+.hyp-preview{margin-top:1rem;padding:.875rem;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.hyp-preview-label{font-size:.7rem;color:var(--faint);font-weight:500;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem}
+.hyp-preview-text{font-size:.82rem;line-height:1.7;color:var(--text)}
+.persona-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.persona-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.75rem}
+.persona-card input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.8rem;color:var(--text);padding:.2rem 0;margin-bottom:.3rem}
+.persona-card textarea{width:100%;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.76rem;color:var(--text);resize:none;min-height:55px;line-height:1.4}
+.pc-label{font-size:.67rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:.2rem;margin-top:.5rem}
+.journey-row{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-bottom:6px;align-items:flex-start}
+.journey-label{font-size:.75rem;font-weight:500;color:var(--muted);padding-top:.5rem}
+.journey-row textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);resize:none;padding:.5rem .65rem;min-height:52px;line-height:1.45;transition:border-color .2s}
+.journey-row textarea:focus{border-color:var(--accent)}
+.roadmap-row{display:grid;grid-template-columns:1fr 80px;gap:8px;align-items:center;padding:.45rem .65rem;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:5px}
+.roadmap-row input{background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.roadmap-row select{font-family:'DM Sans',sans-serif;font-size:.73rem;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 4px;color:var(--text)}
+.interview-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.875rem;margin-bottom:8px}
+.interview-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.interview-card-title{font-size:.8rem;font-weight:500}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--faint);font-size:.75rem;padding:2px 6px;border-radius:5px;font-family:'DM Sans',sans-serif}
+.del-btn:hover{color:#991B1B;background:#FEE2E2}
+.interview-card textarea{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.77rem;color:var(--text);resize:none;min-height:50px;line-height:1.45;margin-bottom:.3rem}
+.interview-card input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);padding:.2rem 0}
+.two-by-two{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:.75rem}
+.two-cell{padding:.75rem}
+.two-cell textarea{width:100%;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.76rem;color:var(--text);resize:none;min-height:65px;line-height:1.4}
+.two-cell textarea::placeholder{color:var(--faint)}
+.two-cell-label{font-size:.67rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
+.q-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:.4rem .65rem;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:5px}
+.q-row input{background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--text);width:100%}
+.big-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;outline:none;font-family:'DM Sans',sans-serif;font-size:.82rem;color:var(--text);line-height:1.6;resize:none;padding:.65rem;min-height:90px;transition:border-color .2s;margin-top:.4rem}
+.big-ta:focus{border-color:var(--accent)}
+.col-label{font-size:.67rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:.35rem;margin-top:.75rem}
+/* -- HOME PAGE -- */
+.page{display:none}
+.page.active{display:block}
+.home-hero{text-align:center;padding:3rem 1rem 2rem}
+.home-hero h1{font-family:'DM Serif Display',serif;font-size:2.6rem;font-weight:400;letter-spacing:-.03em;line-height:1.1;margin-bottom:.5rem}
+.home-hero p{font-size:.9rem;color:var(--muted);font-weight:300;max-width:480px;margin:0 auto}
+.home-actions{display:flex;justify-content:center;gap:.75rem;margin:1.5rem 0 2.5rem}
+.btn-primary{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:.65rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s}
+.btn-primary:hover{opacity:.88}
+.btn-ghost{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:400;background:none;color:var(--muted);border:1px solid var(--border-strong);border-radius:9px;padding:.65rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+.btn-ghost:hover{background:var(--border);color:var(--text)}
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:.5rem}
+.project-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;cursor:pointer;transition:border-color .2s,box-shadow .2s;display:flex;flex-direction:column;gap:.5rem}
+.project-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(29,106,74,.1)}
+.project-card-name{font-size:1rem;font-weight:500;color:var(--text);line-height:1.3}
+.project-card-meta{font-size:.76rem;color:var(--muted);font-weight:300}
+.project-card-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:.25rem}
+.project-card-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
+.project-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.25rem}
+.project-card-pct{font-size:.72rem;color:var(--accent);font-weight:500}
+.project-card-date{font-size:.7rem;color:var(--faint)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted)}
+.empty-state svg{margin-bottom:.75rem;color:var(--faint)}
+.empty-state p{font-size:.85rem;line-height:1.6}
+.home-section-label{font-size:.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);margin-bottom:.75rem}
+/* -- PROJECT HEADER -- */
+.project-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.back-btn{background:none;border:1px solid var(--border-strong);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:5px;transition:background .15s,color .15s;flex-shrink:0}
+.back-btn:hover{background:var(--border);color:var(--text)}
+.project-name-wrap{flex:1;min-width:200px;display:flex;align-items:center;gap:.5rem}
+.project-name-input{font-family:'DM Serif Display',serif;font-size:1.5rem;font-weight:400;letter-spacing:-.01em;color:var(--text);background:transparent;border:none;border-bottom:2px solid transparent;outline:none;width:100%;transition:border-color .2s;padding:.1rem 0}
+.project-name-input:focus{border-bottom-color:var(--accent)}
+.project-name-input::placeholder{color:var(--faint)}
+.save-name-btn{font-family:'DM Sans',sans-serif;font-size:.75rem;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+.save-name-btn.visible{opacity:1;pointer-events:all}
+.delete-project-btn{font-size:.72rem;color:var(--faint);background:none;border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s,color .15s,border-color .15s;flex-shrink:0}
+.delete-project-btn:hover{background:#FEE2E2;border-color:#FCA5A5;color:#991B1B}
+
+
+
+.card-del-row{display:flex;align-items:center;gap:.5rem;padding-top:.625rem;border-top:1px solid var(--border);margin-top:.25rem;flex-wrap:wrap}
+.card-del-btn{font-family:'DM Sans',sans-serif;font-size:.72rem;color:var(--faint);background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.card-del-btn:hover{background:#FEE2E2;border-color:#FCA5A5;color:#991B1B}
+.card-del-confirm{display:none;align-items:center;gap:.5rem;flex-wrap:wrap}
+.card-del-sure{font-size:.72rem;color:#991B1B;font-weight:500}
+.card-del-yes{font-family:'DM Sans',sans-serif;font-size:.72rem;background:#FEE2E2;border:1px solid #FCA5A5;color:#991B1B;border-radius:6px;padding:4px 10px;cursor:pointer;transition:background .15s}
+.card-del-yes:hover{background:#FECACA}
+.card-del-no{font-family:'DM Sans',sans-serif;font-size:.72rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;transition:background .15s}
+.card-del-no:hover{background:var(--border)}
+.proj-del-wrap{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.proj-del-confirm{display:none;align-items:center;gap:.5rem;flex-wrap:wrap}
+
+
+
+.modal-panel{display:none;position:absolute;left:0;right:0;background:rgba(20,18,15,.55);z-index:9999;min-height:100%;padding:2rem 1rem;box-sizing:border-box;}
+.modal-panel.open{display:flex;align-items:flex-start;justify-content:center;}
+.modal-card{background:var(--surface);border-radius:16px;max-width:680px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.22);overflow:hidden;margin:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem .75rem;border-bottom:1px solid var(--border);}
+.modal-title{font-weight:600;font-size:1rem;color:var(--text);}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:6px;font-size:1.2rem;line-height:1;}
+.modal-close:hover{background:var(--bg);}
+.modal-body{padding:1.25rem;}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- -- LOGIN PAGE ------------------------------------------- -->
+  <div id="page-login" class="page active">
+    <div class="home-hero">
+      <h1>PM Product Playbook</h1>
+      <p>Sign in to sync your projects across any device</p>
+    </div>
+    <div style="max-width:380px;margin:2rem auto;text-align:center;">
+      <input type="email" id="login-email" placeholder="you@example.com"
+        style="width:100%;padding:12px 14px;border:1px solid var(--border-strong);border-radius:9px;font-family:inherit;font-size:14px;box-sizing:border-box;outline:none;"
+        onkeydown="if(event.key==='Enter')sendMagicLink();">
+      <button class="btn-primary" onclick="sendMagicLink()" style="width:100%;margin-top:10px;justify-content:center;">
+        Send me a sign-in link
+      </button>
+      <div id="login-status" style="font-size:.8rem;color:var(--muted);margin-top:12px;min-height:1.2em;"></div>
+      <div style="font-size:.75rem;color:var(--faint);margin-top:20px;">
+        No password needed. We will email you a one-time link to sign in.
+      </div>
+      <button class="btn-ghost" onclick="continueOffline()" style="width:100%;margin-top:24px;justify-content:center;">
+        Continue without an account
+      </button>
+      <div style="font-size:.72rem;color:var(--faint);margin-top:8px;">
+        Your work still saves on this device, but will not follow you to another device or browser.
+      </div>
+    </div>
+  </div>
+
+  <!-- -- HOME PAGE ------------------------------------------- -->
+  <div id="page-home" class="page">
+    <div class="home-hero">
+      <h1>PM Product Playbook</h1>
+      <p>A step-by-step guide for every product</p>
+    </div>
+    <div class="home-actions">
+      <button class="btn-primary" onclick="startNewProject()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Start new project
+      </button>
+      <button class="btn-ghost" id="autosave-btn" onclick="requestFileAccess()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Allow Auto-Save
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:-.5rem;margin-bottom:1rem;">
+      <span id="cloud-sync-ind" style="font-size:.75rem;color:var(--muted);">Connecting...</span>
+      <span id="signed-in-row" style="font-size:.75rem;color:var(--faint);margin-left:8px;">
+        <span id="signed-in-email"></span>
+        <button onclick="signOut()" style="background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:inherit;font-family:inherit;margin-left:6px;">Sign out</button>
+      </span>
+    </div>
+    <div class="home-section-label" id="projects-label">Your projects</div>
+    <div id="projects-grid" class="projects-grid"></div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <p>No projects yet.<br>Click <strong>Start new project</strong> to begin your first PM playbook.</p>
+    </div>
+  </div>
+
+  <!-- -- PROJECT PAGE ---------------------------------------- -->
+  <div id="page-project" class="page">
+    <div class="project-header">
+      <button class="back-btn" onclick="goHome()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        All projects
+      </button>
+      <div class="project-name-wrap">
+        <input class="project-name-input" id="project-name-input" type="text" placeholder="Untitled project" oninput="onNameInput()">
+        <button class="save-name-btn" id="save-name-btn" onclick="saveName()">Save name</button>
+      </div>
+      <div class="save-bar">
+        <span class="save-indicator" id="save-ind">All changes saved</span>
+        <button class="btn-sm" onclick="generatePptx()" id="pptx-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          View Slide Deck
+        </button>
+      </div>
+      <div id="pptx-box-wrap" style="margin:6px 0 0;padding:0;"></div>
+
+    </div>
+    <div class="progress-section">
+      <div class="progress-meta">
+        <span class="progress-label">Overall progress</span>
+        <span class="progress-count" id="meta">0 of 0 done</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="pf"></div></div>
+    </div>
+    <div class="complete-banner" id="done-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      All steps complete &mdash; ready to ship!
+    </div>
+    <div id="phases-container"></div></div>
+      
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-panel" id="modal-panel" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title"></div>
+        <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+
+<script id="pm-data" type="application/json">{}</script>
+
+<script>
+
+// ============================================================
+// PM PRODUCT PLAYBOOK -- Vanilla JS
+// Data auto-saves inside this HTML file via File System Access API
+// Falls back to localStorage if file access not granted
+// ============================================================
+
+// -- DATA -------------------------------------------------------------------
+
+const PHASES = [
+  {id:'p1',label:'Phase 1',ch:'Understand',name:'Understand the company',bg:'#D4E9F7',tc:'#1A4A6E',
+   tasks:[
+    {id:'1a',title:'Define the companys Why',desc:'Write down the core mission and purpose. Long after any single product is gone, the Why should still hold true.',modal:'why'},
+    {id:'1b',title:'Complete a 5C analysis',desc:'Company, Customers, Collaborators, Competitors, Climate. A snapshot of the forces shaping your strategy right now.',modal:'fivec'},
+    {id:'1c',title:'Map the competitive landscape',desc:'Who are the main competitors? How do their pricing, positioning, and features compare to yours?'},
+    {id:'1d',title:'Set up a news and trend watch',desc:'Subscribe to relevant industry sources. A great PM spots shifts in the market before they become headlines.'}
+  ]},
+  {id:'p2',label:'Phase 2',ch:'Understand',name:'Define your customers',bg:'#C8EDE0',tc:'#0D5038',
+   tasks:[
+    {id:'2a',title:'Identify who buys vs who uses',desc:'The buyer and user may not be the same person. Map both roles and what each one needs from the product.'},
+    {id:'2b',title:'Write your primary persona',desc:'Name, picture, key details, goals. Focus on patterns of behavior rather than demographics alone.',modal:'persona'},
+    {id:'2c',title:'Write secondary personas if needed',desc:'Identify additional distinct segments and flag where their needs diverge from your primary persona.'},
+    {id:'2d',title:'Define use cases for each persona',desc:'How does each persona use the product to achieve their goal? Map the specific jobs they\'re hiring it for.'},
+    {id:'2e',title:'Consider time and context constraints',desc:'How much time can users realistically invest? What device, environment, or mental state are they in?'}
+  ]},
+  {id:'p3',label:'Phase 3',ch:'Understand',name:'Set success metrics',bg:'#FDECC8',tc:'#6B4200',
+   tasks:[
+    {id:'3a',title:'Define company-level success metrics',desc:'Long-term metrics tie to the Why. Short-term metrics tie to current strategy goals.'},
+    {id:'3b',title:'Define product-level success metrics',desc:'Product metrics should directly support company-level goals. Pick a small set you will actually act on.'},
+    {id:'3c',title:'Separate actionable from vanity metrics',desc:'Actionable drives decisions. Vanity sounds good but does not inform action. Flag which is which.'},
+    {id:'3d',title:'Plan analytics instrumentation with engineering',desc:'Agree on what events to track before the build starts. Retrofitting analytics after launch always costs more.'},
+    {id:'3e',title:'Set up NPS tracking',desc:'Measure overall satisfaction and dig into feature-specific scores to find where the experience is weakest.',modal:'nps'},
+    {id:'3f',title:'Establish a baseline to compare against',desc:'Metrics only tell a story over time. Document where you stand today before any change ships.'}
+  ]},
+  {id:'p4',label:'Phase 4',ch:'Understand',name:'Build the roadmap',bg:'#FAD9CC',tc:'#7A2E14',
+   tasks:[
+    {id:'4a',title:'Set goals before planning projects',desc:'Start with what you want to achieve. Work backward to the specific projects that will get you there.'},
+    {id:'4b',title:'Define Now / Next / Later',desc:'Now = 3-6 months for software. Next = 6-12 months. Later = directional only, intentionally vague.',modal:'roadmap'},
+    {id:'4c',title:'Create both a company and product roadmap',desc:'Company roadmap shows how all products fit together. Product roadmap zooms into one product\'s path.'},
+    {id:'4d',title:'Assign ownership and sequencing',desc:'Each item needs a clear owner. Order projects so dependencies are respected and nothing stalls.'},
+    {id:'4e',title:'Share with internal and external stakeholders',desc:'Teams need to know whats next. Partners, especially hardware suppliers, need lead time to plan.'}
+  ]},
+  {id:'p5',label:'Phase 5',ch:'Hypothesize',name:'Form your opportunity hypothesis',bg:'#DDD9F8',tc:'#3A2F8A',
+   tasks:[
+    {id:'5a',title:'Pick one specific goal for this cycle',desc:'Everything you build next serves this goal. Tie it to a metric you can actually move this cycle.'},
+    {id:'5b',title:'Decide: iteration or blue sky?',desc:'Iteration improves an existing product. Blue sky explores new, unproven territory. Know which one you\'re doing.'},
+    {id:'5c',title:'Write a first-draft opportunity hypothesis',desc:'Even a vague one. Format: Based on [discovery evidence], we believe that [solving problem X] for [persona] will result in [strategic outcome], as measured by a [% change] in [success metric].',modal:'hypothesis'},
+    {id:'5d',title:'Identify supporting evidence',desc:'Even blue sky hypotheses need some evidence. Pull from past research, support tickets, or market signals.'},
+    {id:'5e',title:'Run AI-assisted discovery synthesis',desc:'Feed raw interview notes, support tickets, or bug reports to an AI tool and ask it to synthesize themes by severity. Always audit the output against your own read of the raw data -- AI can smooth over the exact frustration that matters most. Recommended AI tool: Claude.',modal:'generic'}
+  ]},
+  {id:'p6',label:'Phase 6',ch:'Hypothesize',name:'Find & validate opportunities',bg:'#C8EDE0',tc:'#0D5038',
+   sections:[
+    {label:'Strategic Framing',tasks:[
+      {id:'6k',title:'Identify the Breaking Point and Strategic Gap',desc:'Your real competitor is the status quo. Prove the cumulative cost of doing nothing now outweighs the pain of switching, and that your solution renders the user current manual workaround obsolete -- not just adds a feature.',modal:'generic'}
+    ]},
+    {label:'Quantitative',tasks:[
+      {id:'6a',title:'Confirm the right metrics are being captured',desc:'If not, make instrumentation your first task. You cannot act on data you do not have.'},
+      {id:'6b',title:'Segment your data',desc:'Break down metrics by OS, browser, geography, account type, or tenure to see where the real story hides.'},
+      {id:'6c',title:'Run a cohort analysis',desc:'Group users by signup date or key action to track whether the experience is improving or degrading over time.'},
+      {id:'6d',title:'Build a funnel and spot dips',desc:'Map key steps of the user journey. Every large drop-off between steps is a candidate opportunity worth investigating.',modal:'aarrr'},
+      {id:'6e',title:'Ask why until you hit root cause',desc:'Do not stop at the symptom. Keep asking why a metric underperforms until you reach something testable.'}
+    ]},
+    {label:'Qualitative',tasks:[
+      {id:'6f',title:'Check for bugs blocking key flows',desc:'A bug on a critical path is a legitimate priority. Fix the leak before chasing a brand new feature.'},
+      {id:'6g',title:'Review the feature backlog',desc:'Existing requests can seed hypotheses. Also a sign of where current users feel the product falls short.'},
+      {id:'6h',title:'Gather input from the team',desc:'Design, sales, support, and engineering all hear different things from customers. Synthesize across all of them.'},
+      {id:'6i',title:'Review competitor moves and R&D',desc:'Adapting a competitor idea is valid, but always ground it in your own customer evidence before committing.'},
+      {id:'6l',title:'Choose your discovery methods',desc:'Match the method to the question. Attitudinal methods (interviews, surveys) reveal what users say. Behavioral methods (session recordings, usability testing) reveal what users actually do. Strategic methods (cohort analysis, continuous discovery) reveal patterns at scale. Recommended AI tool: Figma for mapping out the research plan visually.',modal:'generic'},
+      {id:'6j',title:'Run targeted customer interviews',desc:'Use your hypothesis to focus the interview. Interviews validate, they do not generate the first hypothesis.'},
+      {id:'6m',title:'Tag every insight as Goal, Friction, or Need',desc:'Goals: what the user is ultimately trying to accomplish. Friction: what is slow, broken, or confusing today. Needs: the workarounds, repeat clicks, and drop-off points behind their behavior. Sorting insights this way turns raw notes into a structured case for what to build.',modal:'generic'}
+    ]}
+  ]},
+  {id:'p7',label:'Phase 7',ch:'Hypothesize',name:'Validate with frameworks',bg:'#FDECC8',tc:'#6B4200',
+   tasks:[
+    {id:'7a',title:'Complete the Value Proposition Canvas',desc:'Map customer jobs, gains, pains vs your product\'s gain creators and pain relievers to spot real value gaps.',modal:'vpc'},
+    {id:'7b',title:'Complete the Business Model Canvas',desc:'Document key partners, activities, resources, value propositions, channels, customer relationships, and revenue.',modal:'bmc'},
+    {id:'7c',title:'Map features against the Kano Model',desc:'Basic must-have, Performance satisfier, Excitement generator. Know which category each feature falls into.',modal:'kano'},
+    {id:'7d',title:'Write your final validated hypothesis',desc:'Unmet need + why you fall short + key metrics to move + supporting evidence, written as one clear statement.',modal:'hypothesis'},
+    {id:'7f',title:'Audit your hypothesis for the four common pitfalls',desc:'Vague or broad: use specific language and a defined metric. Biased framing: frame around the problem, not your favorite solution. Not testable: include a % change that can be validated. Misaligned with goals: tie it to a known strategic outcome.',modal:'generic'},
+    {id:'7e',title:'Get alignment before building',desc:'Share the validated hypothesis with engineering and design leads before committing real build time.'}
+  ]},
+  {id:'p8',label:'Phase 8',ch:'Validate',name:'Internal validation',bg:'#FAD9CC',tc:'#7A2E14',
+   tasks:[
+    {id:'8a',title:'Run a SWOT analysis',desc:'Map Strengths, Weaknesses, Opportunities, Threats to see where this opportunity fits your broader position.',modal:'swot'},
+    {id:'8f',title:'Classify the bet: optimizing the existing or exploring the blue sky',desc:'Optimizing the existing improves a known workflow or fixes identified friction in something that already works. Exploring the blue sky proposes a new solution to a problem users may not yet realize can be fixed. Each calls for a different validation bar.',modal:'generic'},
+    {id:'8b',title:'Run through the internal validation checklist',desc:'Is it aligned with vision? Feasible? Does it move a metric that matters? Walk every opportunity through this filter.',modal:'internalcheck'},
+    {id:'8c',title:'Assess return on development investment',desc:'Plot the opportunity on a 2x2 grid: development cost against expected business and user value.',modal:'roi'},
+    {id:'8d',title:'Map the customer journey',desc:'Document current state, steps, motivations, hindrances, and the desired future state for your persona.',modal:'journey'},
+    {id:'8e',title:'Score and rank against other opportunities',desc:'Assign value and cost using an exponential scale, then sort to find your highest-leverage opportunities.',modal:'scoring'}
+  ]},
+  {id:'p9',label:'Phase 9',ch:'Validate',name:'External validation',bg:'#D4E9F7',tc:'#1A4A6E',
+   sections:[
+    {label:'Customer interviews',tasks:[
+      {id:'9a',title:'Write down what you know vs what you are assuming',desc:'Use the Business Model Canvas and Value Proposition Canvas to separate validated facts from open assumptions.'},
+      {id:'9b',title:'Write your hypothesis in structured form',desc:'I believe [persona] experiences [pain] when doing [task] because of [limitation]. This becomes your test.',modal:'hypothesis'},
+      {id:'9c',title:'Draft screener questions',desc:'Hide the right answer in screener questions so candidates answer honestly.'},
+      {id:'9d',title:'Write interview questions focused on current behavior',desc:'Ask what people do today, not what they might do. Use: Tell me about how you do X today.',modal:'interviewqs'},
+      {id:'9e',title:'Find 5+ people to interview',desc:'Start with your network. Ask sales, support, or customer success for warm introductions to the right users.'},
+      {id:'9f',title:'Conduct the interviews',desc:'Stay neutral, restate in your own words. Note nonverbals and emotional reactions. Treat maybe as no.'},
+      {id:'9g',title:'Draw conclusions from interviews',desc:'Pull 5-10 key points per interview immediately afterward, while the context is still fresh.',modal:'conclusions'}
+    ]},
+    {label:'Surveys',tasks:[
+      {id:'9h',title:'Run a survey after interviews validate the hypothesis',desc:'Surveys confirm whether interview conclusions hold at scale, across a broader slice of your user base.'},
+      {id:'9i',title:'Design the survey carefully',desc:'Keep it short. Start broad, move to specific. Every question should map to a decision you need to make.'},
+      {id:'9j',title:'Analyze survey results',desc:'Build an importance vs satisfaction graph. Act on what\'s rated high importance and low satisfaction first.'}
+    ]}
+  ]},
+  {id:'p10',label:'Phase 10',ch:'Validate',name:'Run experiments (if needed)',bg:'#DDD9F8',tc:'#3A2F8A',
+   tasks:[
+    {id:'10a',title:'Choose your experiment type',desc:'A/B test measures the impact of one change at minimal traffic. Multivariate finds the best combination of several changes at higher traffic. Feature flag enables a safe, controlled rollout to a segment. Canary release detects instability early at any scale. Match the method to your question, sample size, and risk tolerance. Recommended AI tool: Optimizely for setup and analysis.',modal:'generic'},
+    {id:'10e',title:'Define your hypothesis, control, and variant before launch',desc:'Format: We believe that [feature under test] for [persona] will result in [outcome], as measured by a [% change] in [primary metric] within [duration]. We will protect [guardrail metric] throughout the test. The control is unchanged; the variant is exactly one change.',modal:'generic'},
+    {id:'10b',title:'Run an A/B test (if iterating)',desc:'Build a quick B version. Randomly split users and measure the metric that matters before rolling out fully. Avoid the six most common mistakes: peeking early, tracking too many metrics, ignoring segment-level harm, setting your threshold after seeing results, relying on one metric alone, and over-fearing interaction effects between concurrent tests.'},
+    {id:'10c',title:'Build a simple MVP (if building new)',desc:'Pre-order MVP, Concierge MVP, Wizard of Oz MVP. Each tests demand without building the full product.',modal:'mvptypes'},
+    {id:'10d',title:'Assess results and decide: ship, iterate, investigate, or kill',desc:'Ship if the primary metric moved, the result is real, and nothing broke -- roll out to 100% and log learnings. Iterate if direction is promising but the lift has not cleared your minimum detectable effect -- extend duration or sharpen the variant. Investigate if a guardrail broke or segments show contradictory results. Kill if the variant underperformed or showed no difference -- log the learning and move on.'}
+  ]},
+  {id:'p11',label:'Phase 11',ch:'Execute',name:'Write the internal press release',bg:'#D4E9F7',tc:'#1A4A6E',
+   tasks:[
+    {id:'11a',title:'Write the headline',desc:'One sentence: key target market + how it helps them + your product name. Make it concrete, not clever.',modal:'pressrelease'},
+    {id:'11b',title:'Write the summary paragraph',desc:'Most people only read the first paragraph. Cover the problem, the solution, and the value in three sentences.',modal:'pressrelease'},
+    {id:'11c',title:'Describe the problem and solution',desc:'Articulate the specific problem your target customer faces today, and the solution your product provides.',modal:'pressrelease'},
+    {id:'11d',title:'Add a PM quote and a customer quote',desc:'Include a quote from you the PM about why this matters, and one from a customer describing the impact.',modal:'pressrelease'},
+    {id:'11e',title:'Write the conclusion and call to action',desc:'How will new customers find, sign up for, and start using this? End with a clear, simple next step.',modal:'pressrelease'},
+    {id:'11f',title:'Share with key stakeholders and gather feedback',desc:'Share with engineering and design leads to uncover blockers or concerns before you invest further.'}
+  ]},
+  {id:'p12',label:'Phase 12',ch:'Execute',name:'Write the product review',bg:'#C8EDE0',tc:'#0D5038',
+   tasks:[
+    {id:'12a',title:'Write what a reviewer will focus on',desc:'What parts of the product will a reviewer highlight, and what will they criticize? Write both honestly.',modal:'productreview'},
+    {id:'12b',title:'Write the conclusion a reviewer would reach',desc:'Why should a customer buy this product, especially over competitors or their current solution?',modal:'productreview'},
+    {id:'12d',title:'Run the alignment handshake before building',desc:'Sequence matters. First gut-check with your manager to confirm the problem and success metrics align with business strategy. Then consult the engineering lead for technical constraints and rough sizing. Then engage the design lead to refine the UX based on what is technically feasible.',modal:'generic'},
+    {id:'12c',title:'Revisit the press release and review at key decision points',desc:'As the product evolves, update both documents so they always reflect what you\'re actually planning to ship.'}
+  ]},
+  {id:'p13',label:'Phase 13',ch:'Execute',name:'Define the MVP',bg:'#FDECC8',tc:'#6B4200',
+   tasks:[
+    {id:'13a',title:'State the overall goal and value in one sentence',desc:'Write down explicitly what value this product delivers and to whom, in language anyone on the team can repeat.',modal:'mvpdefine'},
+    {id:'13b',title:'List every feature you think you need with a reason for each',desc:'Write features as: [Feature] so that [customer can do X]. Only include features mentioned in your press release and product review.',modal:'mvpdefine'},
+    {id:'13c',title:'Cross out what customers do not actually need',desc:'This is the hardest step. Remove features that do not directly address the core customer need. The MVP should feel uncomfortably lean.',modal:'mvpdefine'},
+    {id:'13d',title:'Protect the delighters',desc:'Before finalizing cuts, ask: does this feature plus the core idea? Fight to keep at least one Kano wow feature.'},
+    {id:'13e',title:'Validate the MVP list with key customers before release',desc:'Share early versions with target customers. Use their reaction to confirm or adjust scope before locking it in.'}
+  ]},
+  {id:'p14',label:'Phase 14',ch:'Execute',name:'Write the PRD',bg:'#FAD9CC',tc:'#7A2E14',
+   tasks:[
+    {id:'14a',title:'Write the title, overview, and objectives',desc:'Give the project a unique name. Write a short overview of what it is and why it matters now.',modal:'prd'},
+    {id:'14b',title:'Define success metrics',desc:'List the key KPIs you will measure to know if this project succeeded.',modal:'prd'},
+    {id:'14c',title:'Write the messaging and timeline',desc:'How will marketing describe this product in one sentence? When does it need to ship?',modal:'prd'},
+    {id:'14d',title:'Write user scenarios',desc:'Write full paragraph stories: setup, action, result. Show how a real user experiences the new feature.',modal:'userscenarios'},
+    {id:'14h',title:'Scope your feature list with MoSCoW',desc:'Must Have: remove it and the product breaks or the core outcome fails. Should Have: valuable but not load-bearing. Could Have: polish for a later version. Will Not Have (Now): explicit exclusions that protect scope and timeline.',modal:'moscow'},
+    {id:'14f',title:'Write a Simplified PRD for rapid prototyping',desc:'A build-ready spec distinct from your Traditional PRD: Vision, Press Release, User Stories with acceptance criteria, Screens to Build, Functional Requirements, Smart Behaviors, Technical Constraints, and a Decision Log. Feed it directly into an AI prototyping tool. Recommended AI tool: Lovable or Bolt.',modal:'simplifiedprd'},
+    {id:'14g',title:'Share the PRD progressively and gather feedback',desc:'Start with leads and fellow PMs, then design and engineering, then the broader team. Update it as you learn.'}
+  ]},
+  {id:'p15',label:'Phase 15',ch:'Design',name:'Kick off with the design team',bg:'#D4E9F7',tc:'#1A4A6E',
+   tasks:[
+    {id:'15a',title:'Brief the design lead and user researcher',desc:'Share the PRD. Walk them through the personas, journey map, and the problem you\'re trying to solve.',modal:'designbrief'},
+    {id:'15b',title:'Align on UX strategy and scope',desc:'Work with the lead designer to agree on what experience you want to create, and how it should feel.',modal:'designbrief'},
+    {id:'15c',title:'Set up a recurring design / engineering / product meeting',desc:'A weekly sync keeps everyone on the same page and surfaces blockers before they cost real time.'},
+    {id:'15d',title:'Schedule customer testing for later in the process',desc:'Book usability testing sessions now, even before wireframes exist, so the calendar forces a deadline.'}
+  ]},
+  {id:'p16',label:'Phase 16',ch:'Design',name:'Guide the design process',bg:'#C8EDE0',tc:'#0D5038',
+   tasks:[
+    {id:'16a',title:'User research phase',desc:'The user researcher interviews customers, identifying needs and frustrations the design must address.'},
+    {id:'16b',title:'Information architecture phase',desc:'The IA designer models and organizes the data structure, navigation, and content hierarchy.'},
+    {id:'16c',title:'Interaction design phase',desc:'Interaction designers determine navigation, UI patterns, and how the user moves through each flow.',modal:'wireframes'},
+    {id:'16d',title:'Prototyping phase',desc:'Static wireframes become interactive prototypes that simulate the real experience for testing.'},
+    {id:'16e',title:'Visual design phase',desc:'Visual designers establish look, feel, colors, typography, and the overall aesthetic direction.'},
+    {id:'16f',title:'Content strategy phase',desc:'A content strategist ensures the right words, tone, and microcopy support the design at every step.'}
+  ]},
+  {id:'p17',label:'Phase 17',ch:'Design',name:'Give feedback and run design sprints',bg:'#FDECC8',tc:'#6B4200',
+   tasks:[
+    {id:'17a',title:'Evaluate designs using Dieter Rams 10 principles',desc:'Is it innovative, useful, aesthetic, understandable, unobtrusive, honest, long-lasting, thorough, environmentally conscious, and as minimal as possible?',modal:'rams'},
+    {id:'17b',title:'Run usability testing with prototypes',desc:'Have real customers attempt key tasks using the prototype. Watch where they hesitate, struggle, or fail.',modal:'usabilitytesting'},
+    {id:'17c',title:'Consider running a Google Design Sprint',desc:'A week-long collaborative sprint: Understand, Diverge, Decide, Prototype, Test. Useful for high-stakes bets.',modal:'designsprint'},
+    {id:'17d',title:'Handle edge cases and engineering questions',desc:'As designs hand off to engineering, new questions surface. Answer them quickly to avoid stalling the build.'},
+    {id:'17e',title:'Confirm engineering viability before locking designs',desc:'Get explicit sign-off from the engineering lead that the designs are technically feasible before locking them.'}
+  ]},
+  {id:'p18',label:'Phase 18',ch:'Engineer',name:'Set up the engineering relationship',bg:'#D4E9F7',tc:'#1A4A6E',
+   tasks:[
+    {id:'18a',title:'Understand how each engineer works best',desc:'Some engineers want a to-do list and no context. Others want the full picture. Learn each person\'s style.'},
+    {id:'18b',title:'Share the PRD with the team',desc:'Make the PRD the project homepage. Engineers should be able to find context without asking you directly.'},
+    {id:'18c',title:'Establish clear communication norms',desc:'Give engineers uninterrupted focus time. Batch your questions instead of interrupting throughout the day.'},
+    {id:'18d',title:'Write down key decisions',desc:'Document scope decisions, trade-offs, and changes as they happen so nothing has to be re-litigated later.'},
+    {id:'18e',title:'Monitor the time / quality / money balance',desc:'Scope creep, sick days, and tech debt all affect the balance. Watch all three, not just the deadline.',modal:'engbalance'}
+  ]},
+  {id:'p19',label:'Phase 19',ch:'Engineer',name:'Choose a development methodology',bg:'#C8EDE0',tc:'#0D5038',
+   tasks:[
+    {id:'19a',title:'Decide: Waterfall, Agile, Scrum, or Kanban?',desc:'Waterfall works when requirements and technology are stable. Agile, Scrum, and Kanban suit faster iteration.',modal:'methodology'},
+    {id:'19b',title:'Set up the product backlog',desc:'Collect all bugs, features, and suggestions and prioritize them so engineering always knows what\'s next.',modal:'backlog'},
+    {id:'19c',title:'Write user stories with acceptance criteria',desc:'Format: As a [persona] I want [feature] so that [reason]. Add clear, testable acceptance criteria.',modal:'userstories'},
+    {id:'19d',title:'Run sprint planning (if using Scrum)',desc:'Pick the sprint backlog based on team velocity and priority, not just what feels most urgent today.',modal:'sprint'},
+    {id:'19e',title:'Set up a Kanban board (if using Kanban)',desc:'Create columns: To Do, In Progress, Ready to Test, Done. Limit work in progress to protect focus.',modal:'kanban'}
+  ]},
+  {id:'p20',label:'Phase 20',ch:'Engineer',name:'Manage the build day-to-day',bg:'#FDECC8',tc:'#6B4200',
+   tasks:[
+    {id:'20a',title:'Attend daily standups',desc:'What did each person do yesterday? What will they do today? What\'s blocking them right now?'},
+    {id:'20b',title:'Do backlog grooming each sprint',desc:'Clean up stories, add steps to reproduce bugs, and re-estimate anything that\'s grown unclear.'},
+    {id:'20c',title:'Do acceptance testing on completed stories',desc:'Verify each user story is completed correctly against its acceptance criteria before marking it done.'},
+    {id:'20d',title:'Monitor for technical debt',desc:'Periodically schedule sprints or stories specifically to pay down tech debt before it compounds.'},
+    {id:'20e',title:'Run end-of-sprint demos and retrospectives',desc:'Show stakeholders what was built. Gather feedback on the work and on how the team\'s process is going.'},
+    {id:'20f',title:'Prioritize scope cuts over schedule extensions',desc:'If something is taking too long, cut a feature rather than extend the deadline. Protect the release date.'}
+  ]},
+
+  {id:'p21',label:'Phase 21',ch:'Engineer',name:'Manage remote or third-party teams',bg:'#FAD9CC',tc:'#7A2E14',
+   tasks:[
+    {id:'21a',title:'Establish golden hour handoff meetings',desc:'What does each team need from the other at the moment of handoff? Define it before the deadline arrives.'},
+    {id:'21b',title:'Run async standups if time zones do not overlap',desc:'Post status updates to Slack or email at the start of each person\'s day so the team stays in sync.'},
+    {id:'21c',title:'Set frequent milestones with third-party teams',desc:'Do not hand a large spec to an agency and check back in six weeks. Review work in small, frequent increments.'},
+    {id:'21d',title:'Watch for red flags in agency billing',desc:'Sketchy agencies assign hard story point estimates to vague specs. Be wary of unusually fast or firm quotes.',modal:'agencyflags'},
+    {id:'21e',title:'Get the team together in person periodically',desc:'Remote teams miss natural team-building. Even one in-person session per quarter can rebuild lost trust.'}
+  ]},
+{id:'p22',label:'Phase 22',ch:'Market',name:'Build the marketing side of your personas',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'22a',title:'Expand personas with buying criteria',desc:'Add how each persona evaluates products, what success looks like for them, and what influence they have on the buying decision.',modal:'persona'},
+    {id:'22b',title:'Map channels and customer relationships',desc:'For each persona: how do they learn about new products? What type of relationship do they expect -- self-serve, account manager, in-person demo?',modal:'aarrr'},
+    {id:'22c',title:'Identify revenue streams and pricing model',desc:'How much will customers pay and how often? Is it subscription, one-time, freemium, or razor/blade? Document how pricing affects your success metrics.',modal:'generic'}
+   ]},
+  {id:'p23',label:'Phase 23',ch:'Market',name:'Craft your product message',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'23a',title:'Define your core theme',desc:'Why is the product important? Why are you doing this? What is special about your mission? One theme that answers all three.',modal:'pressrelease'},
+    {id:'23b',title:'Write the customer-facing message',desc:'Focus on what the product lets the customer DO, not what it does. Use the customer own diction. Frame as: we are taking the hassle out of [X].',modal:'pressrelease'},
+    {id:'23c',title:'Write persona-specific messages',desc:'Different personas care about different things. Write a distinct message for each key persona. What is the shortest message that resonates with each?',modal:'pressrelease'},
+    {id:'23d',title:'Find your company voice',desc:'Casual or formal? Consumer products trend casual and authentic. Enterprise and regulated fields often require formal. Stay consistent across all mediums.',modal:'generic'}
+   ]},
+  {id:'p24',label:'Phase 24',ch:'Market',name:'Plan your go-to-market (GTM)',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'24a',title:'Set clear launch objectives',desc:'Is the goal awareness, adoption, new customer acquisition, or getting existing customers to upgrade? Your objective drives every other launch decision.',modal:'generic'},
+    {id:'24b',title:'Pick your launch timing window',desc:'Consumer products: start of year, Dads and Grads, or pre-Black Friday. B2B: align with customer buying cycles. Earlier in the week for smaller releases.',modal:'roadmap'},
+    {id:'24c',title:'Choose your launch type',desc:'Big bang event, press briefings, small influencer event, beta/invite-only, or quiet rollout? Match the type to the product scope and your capability.',modal:'generic'},
+    {id:'24e',title:'Size your launch tier',desc:'S = minimal, no proactive outreach, affects a small subset. M = targeted, limited channels for a specific cohort. L = multi-channel, affects a large segment. XL = full GTM with press and events, affects the majority of users. A release ships the feature -- a launch activates the market.',modal:'generic'},
+    {id:'24f',title:'Map your Owned, Earned, and Paid channels',desc:'Owned: email, in-app, push, your own social handles -- used at every tier. Earned: press coverage, reviews, word of mouth -- the most credible distribution. Paid: search, social, influencer -- used when owned channels alone will not hit your goal.',modal:'generic'},
+    {id:'24d',title:'Plan launch assets',desc:'Website updates, support docs, screenshots, blog posts, demo plan, press FAQ, internal training for support and sales. Assign owners and due dates.',modal:'generic'}
+   ]},
+  {id:'p25',label:'Phase 25',ch:'Market',name:'Run your beta test',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'25a',title:'Run an internal release first',desc:'Get your own team using the product before showing any external customer. Catch major bugs and validate the core flows work as expected.',modal:'usabilitytesting'},
+    {id:'25b',title:'Select your beta group',desc:'Match the beta group to your target personas. Invited betas build exclusivity and expert advocates. Auto opt-in betas give real-world data at scale.',modal:'usabilitytesting'},
+    {id:'25c',title:'Set up feedback mechanisms',desc:'Quantitative analytics for success metrics and crash logs. Qualitative channel for customer feedback. Beta forum for testers to help each other.',modal:'conclusions'},
+    {id:'25e',title:'Write the enablement brief for Sales, CS, and Support',desc:'At minimum cover: what it is and who it is for, key features and how they work, common objections and how to handle them, and what is changing vs staying the same. A good strategy with no one able to explain it to a customer still fails.',modal:'generic'},
+    {id:'25d',title:'Assess feedback and make launch decisions',desc:'Did customers adopt it? What bugs or barriers appeared? Was anything not discoverable? Use results to decide: fix and re-beta, adjust scope, or launch.',modal:'conclusions'}
+   ]},
+  {id:'p26',label:'Phase 26',ch:'Market',name:'Execute the launch',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'26a',title:'Deliver your press tour and messaging',desc:'Know the key product messages cold. Work with comms team to prepare for hard questions. Have a demo flow ready. Speak with clarity and passion.',modal:'pressrelease'},
+    {id:'26b',title:'Monitor launch day',desc:'Watch for critical bugs, server capacity issues, and customer support spikes. Have a plan with engineering to assess and fix issues fast.',modal:'kanban'},
+    {id:'26c',title:'Track earned media',desc:'Social posts, reviews, and press articles you did not control or pay for. Earned media means people find your product worth writing about.',modal:'productreview'}
+   ]},
+  {id:'p27',label:'Phase 27',ch:'Market',name:'Measure and optimize post-launch',
+   bg:'#FDE8D8',tc:'#7A2E14',
+   tasks:[
+    {id:'27a',title:'Measure against launch objectives',desc:'Did you hit your goals? Compare success metrics pre- and post-launch. Look at adoption of new features specifically -- is it discoverable?',modal:'nps'},
+    {id:'27b',title:'Understand the customer lifecycle',desc:'Map where customers are in the funnel: awareness, interest, trust, purchase, advocacy. Make sure messaging matches each phase.',modal:'aarrr'},
+    {id:'27d',title:'Make the post-launch call: double-down, iterate, pivot, or deprioritize',desc:'Double-Down: the data confirms it is working -- expand rollout and investment. Iterate: mixed signals -- adjust one variable such as messaging, audience, or channel. Pivot: results are off-target -- adjust positioning or the product itself. Deprioritize: adoption is weak -- log the learning and redirect resources.',modal:'generic'},
+    {id:'27c',title:'Learn key marketing cost metrics',desc:'PPI, PPC, PPA, CTR, CPM, CPC, CLV. Know what each means so you can participate in marketing strategy conversations meaningfully.',modal:'generic'}
+   ]},
+  {id:'p28',label:'Phase 28',ch:'Succeed',name:'Assess, celebrate, and recommend what is next',
+   bg:'#E8F4EE',tc:'#0D5038',
+   tasks:[
+    {id:'28a',title:'Celebrate the launch with the team',desc:'Recognize individual contributors by name. PMs often get the credit but designers and engineers did the work. Make each person feel like part of something bigger. Celebrate effort even if the launch was not perfect.',modal:'generic'},
+    {id:'28b',title:'Schedule a one-on-one with your lead',desc:'Ask your lead directly: what went well, what would they like you to do differently, and what feedback did they hear from other teams? This conversation is uncomfortable but essential.',modal:'generic'},
+    {id:'28c',title:'Run a team postmortem',desc:'Book an hour with the core team and key stakeholders. Create a relaxed atmosphere. Divide a whiteboard into two columns: things that went well, and things you wish went more smoothly. All opinions are valid. Write up the notes and commit to specific changes for the next cycle.',modal:'notes'},
+    {id:'28d',title:'Measure against your success metrics',desc:'Give it enough time for meaningful data to accumulate. Are you hitting your goals? What do product reviews, support tickets, and customer feedback say? Look at both quantitative metrics and qualitative sentiment.',modal:'nps'},
+    {id:'28e',title:'Decide: move on, iterate, or sunset',desc:'Three buckets: (1) Goals achieved -- move on to the next roadmap item. (2) Goals not achieved -- dig deeper, run A/B tests, iterate. (3) No reasonable effort will hit goals, or priorities shifted -- sunset the product with a support window, data access period, and migration path.',modal:'generic'},
+    {id:'28f',title:'Write your recommendation for the next cycle',desc:'Feed your findings back into the roadmap. What is the next opportunity hypothesis for this product? If iterating, what specific changes will you make and why? If moving on, what comes next on the roadmap?',modal:'roadmap'},
+    {id:'28g',title:'Write your individual insights: friction, learnings, and the aha moment',desc:'Friction points: what was the hardest part of the process and why? Key learnings: what would you do differently next time? Aha moment: what assumption got overturned by evidence during this cycle? This is for your own growth, not the roadmap.',modal:'notes'}
+   ]}
+];
+
+
+const DEFAULT_QS = [
+  'Tell me about how you handle this topic today.',
+  'How often do you deal with this?',
+  'What were you doing right before this came up?',
+  'How long does it typically take?',
+  'What made you start using your current solution?',
+  'If you could wave a magic wand and do anything you cannot do today, what would it be?',
+  'Is there anything about this topic I should have asked about?'
+];
+
+// MYREC_PHASES built dynamically from PHASES to save space
+var MYREC_IDS = {"1": ["1c"], "2": ["2a", "2b", "2c", "2d", "2e"], "3": ["3b", "3c", "3d", "3e", "3f"], "4": ["4b", "4d", "4e"], "5": ["5c", "5d"], "6": ["6a", "6b", "6d", "6e"], "7": ["7a", "7c", "7d", "7e"], "8": ["8a", "8b", "8c", "8d", "8e"], "9": ["9a", "9b", "9d", "9e", "9f", "9g"], "10": ["10b", "10d"], "11": ["11a", "11b", "11c", "11d", "11e", "11f"], "12": ["12a", "12b", "12c"], "13": ["13a", "13b", "13c", "13d", "13e"], "14": ["14a", "14b", "14c", "14d", "14e", "14f", "14g"], "15": ["15a", "15b", "15c", "15d"], "16": ["16a", "16b", "16c", "16d", "16e", "16f"], "17": ["17a", "17b", "17c", "17d", "17e"], "18": ["18a", "18b", "18c", "18d", "18e"], "19": ["19a", "19b", "19c", "19d", "19e"], "20": ["20a", "20b", "20c", "20d", "20e", "20f"], "28": ["28a", "28b", "28c", "28d", "28e", "28f"]};
+
+function buildMyRecPhases(){
+  var idx = {};
+  PHASES.forEach(function(ph){
+    var tasks = ph.sections ? ph.sections.reduce(function(a,s){return a.concat(s.tasks);}, []) : (ph.tasks||[]);
+    tasks.forEach(function(t){ idx[t.id] = {task:t, phase:ph}; });
+  });
+  var result = [];
+  Object.keys(MYREC_IDS).forEach(function(pnum){
+    var ids = MYREC_IDS[pnum];
+    var first = idx[ids[0]];
+    if(!first) return;
+    var ph = first.phase;
+    result.push({
+      id:'mrp'+pnum,
+      label:ph.label,
+      ch:ph.ch,
+      name:ph.name,
+      bg:ph.bg,
+      tc:ph.tc,
+      tasks:ids.map(function(id){ return idx[id] ? idx[id].task : null; }).filter(Boolean)
+    });
+  });
+  return result;
+}
+
+const MYREC_SEED = {'roadmap': {'rows': [{'name': 'Triage all public-side change requests', 'bucket': 'now'}, {'name': 'Stakeholder interviews (departments + residents)', 'bucket': 'now'}, {'name': 'Baseline metrics audit', 'bucket': 'now'}, {'name': 'Map current registration and booking workflows', 'bucket': 'now'}, {'name': 'Share mockups with UX team for feedback', 'bucket': 'now'}, {'name': 'Registration workflow simplification', 'bucket': 'next'}, {'name': 'Mobile responsive fixes', 'bucket': 'next'}, {'name': 'Navigation and program discovery redesign', 'bucket': 'next'}, {'name': 'Visual design modernization', 'bucket': 'next'}, {'name': 'Top priority change requests', 'bucket': 'next'}, {'name': 'Facility booking redesign', 'bucket': 'later'}, {'name': 'ADA compliance audit', 'bucket': 'later'}, {'name': 'Account management UX overhaul', 'bucket': 'later'}, {'name': 'Smart program search and filtering', 'bucket': 'later'}]}, 'scoring': {'rows': [{'name': 'Simplify registration workflow', 'value': 16, 'cost': 8}, {'name': 'Mobile responsive fixes', 'value': 16, 'cost': 8}, {'name': 'Navigation redesign', 'value': 8, 'cost': 4}, {'name': 'Visual design modernization', 'value': 8, 'cost': 4}, {'name': 'Change request triage', 'value': 8, 'cost': 2}, {'name': 'Payment flow simplification', 'value': 8, 'cost': 4}, {'name': 'ADA improvements', 'value': 8, 'cost': 8}, {'name': 'Facility booking review', 'value': 4, 'cost': 4}, {'name': 'Account management improvements', 'value': 4, 'cost': 4}]}, 'interviewqs': {'rows': ['Walk me through the last time you registered for a program. What happened?', 'Where did you get stuck or confused?', 'What did you do when stuck -- call the office, give up, or find another way?', 'What do you wish the portal did differently?', 'How does MyRec compare to other online registration experiences?', 'What device do you typically use on the portal?', 'Is there anything about the portal you actually like?', 'Anything I should have asked that I did not?']}, 'backlog': {'top5': '1. Registration flow too many steps -- residents abandon (HIGH)\n2. Mobile layout breaks on forms (HIGH)\n3. Program search not filtering correctly (MEDIUM, confirmed bug)\n4. Navigation confusing -- cannot find facility booking (HIGH)\n5. Visual design inconsistency across pages (MEDIUM)', 'icebox': '- Custom branding per department\n- Social login\n- Waitlist SMS\n- Multi-language support', 'health': 'Triage: Bug / UX / Feature / Design. Score by value/effort. Align with engineering on complexity.'}, 'persona': {'name': 'Sarah -- Resident / Parent', 'goals': 'Register kids for programs quickly. Manage account without calling the office.', 'pains': 'Portal feels dated. Navigation confusing. Registration has too many steps. Mobile nearly unusable.', 'success': 'Completes registration in under 5 minutes on any device without assistance.', 'context': 'Usually on her phone. Calls the department when stuck -- creating staff burden.'}, 'swot': {'s': 'Deep domain expertise. Change requests already collected. Mockups in progress -- accelerates UX handoff.', 'w': 'Public side underprioritized vs admin. Tech debt unknown. CRs not yet triaged.', 'o': 'Residents expect consumer-grade experiences from government. Strong competitive differentiator.', 't': 'Scope creep risk. Changes could break existing client configs if not tested carefully.'}};
+
+function buildMyRecProject() {
+  return {
+    id: 'proj_myrec_public',
+    name: 'MyRec Public Side Enhancements',
+    phaseSet: 'myrec',
+    checks: {},
+    created: Date.now(),
+    updated: Date.now(),
+    data: Object.assign({}, MYREC_SEED)
+  };
+}
+
+// -- STORAGE ----------------------------------------------------------------
+var fileHandle = null;
+var saveDebounce = null;
+var currentProjectId = null;
+var currentPhases = null;
+
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
+// -- SUPABASE SYNC ------------------------------------------------------------
+var SUPABASE_URL = 'https://crnbecpbdupmeeadnijy.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_40bIQ5yc4wxU9IB4MzIRdw_j5RV65pK';
+var _sb = null;
+var _sbReady = false;
+var _appCache = null;
+var _saveDebounceSb = null;
+
+function initSupabase(){
+  return new Promise(function(resolve){
+    if(typeof window.supabase === 'undefined'){ resolve(null); return; }
+    try{
+      _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      });
+      _sb.auth.getSession().then(function(res){
+        var session = res.data && res.data.session;
+        _sbReady = !!session;
+        resolve(session || null);
+      }).catch(function(){ resolve(null); });
+    }catch(e){ resolve(null); }
+  });
+}
+
+function sendMagicLink(){
+  var email=(document.getElementById('login-email').value||'').trim();
+  var statusEl=document.getElementById('login-status');
+  if(!email || email.indexOf('@')<0){ statusEl.textContent='Enter a valid email address.'; return; }
+  if(!_sb){ statusEl.textContent='Cloud sync is unavailable right now (Supabase client not initialized). You can continue without an account.'; return; }
+  statusEl.textContent='Sending link...';
+  try {
+    _sb.auth.signInWithOtp({ email: email, options:{ emailRedirectTo: window.location.href } }).then(function(res){
+      if(res.error){
+        statusEl.textContent='Error: '+res.error.message+(res.error.status?' (status '+res.error.status+')':'');
+        console.error('signInWithOtp error:', res.error);
+      } else {
+        statusEl.textContent='Check your email for a sign-in link.';
+      }
+    }).catch(function(e){
+      statusEl.textContent='Caught error: '+(e&&e.message?e.message:String(e));
+      console.error('signInWithOtp threw:', e);
+    });
+  } catch(e){
+    statusEl.textContent='Sync error: '+(e&&e.message?e.message:String(e));
+    console.error('sendMagicLink outer error:', e);
+  }
+}
+
+function continueOffline(){
+  showPage('home');
+  renderHome();
+  updateCloudSyncUI(false);
+}
+
+function signOut(){
+  if(_sb){ _sb.auth.signOut().catch(function(){}); }
+  _appCache=null; _sbReady=false;
+  try{ lsSet('pm_playbook_v2', JSON.stringify({projects:{}})); }catch(e){}
+  location.reload();
+}
+
+function sbFetchAllProjects(){
+  if(!_sbReady) return Promise.resolve(null);
+  return _sb.from('pm_projects').select('*').then(function(res){
+    if(res.error || !res.data) return null;
+    var projects = {};
+    res.data.forEach(function(row){
+      projects[row.id] = {
+        id: row.id, name: row.name || '', phaseSet: row.phase_set || 'standard',
+        checks: row.checks || {}, data: row.data || {},
+        created: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        updated: row.updated_at ? new Date(row.updated_at).getTime() : Date.now()
+      };
+    });
+    return { projects: projects };
+  }).catch(function(){ return null; });
+}
+
+function sbUpsertProject(proj){
+  if(!_sbReady) return;
+  _sb.from('pm_projects').upsert({
+    id: proj.id, name: proj.name || '', phase_set: proj.phaseSet || 'standard',
+    checks: proj.checks || {}, data: proj.data || {}
+  }).then(function(res){
+    if(res.error) console.warn('Supabase save failed:', res.error.message);
+  }).catch(function(e){ console.warn('Supabase save error:', e); });
+}
+
+function sbDeleteProject(id){
+  if(!_sbReady) return;
+  _sb.from('pm_projects').delete().eq('id', id).then(function(res){
+    if(res.error) console.warn('Supabase delete failed:', res.error.message);
+  }).catch(function(){});
+}
+
+function loadApp(){
+  if(_appCache) return _appCache;
+  try {
+    var tag=document.getElementById('pm-data');
+    if(tag && tag.textContent && tag.textContent.trim() !== '{}'){
+      var p=JSON.parse(tag.textContent);
+      if(p && p.projects){ _appCache=p; return p; }
+    }
+  } catch(e){}
+  try {
+    var ls=lsGet('pm_playbook_v2');
+    if(ls){var p=JSON.parse(ls);if(p&&p.projects){ _appCache=p; return p; }}
+  } catch(e){}
+  _appCache = {projects:{}};
+  return _appCache;
+}
+
+function saveApp(d){
+  _appCache = d;
+  try{lsSet('pm_playbook_v2',JSON.stringify(d));}catch(e){}
+  showSaved();
+  if(fileHandle){
+    clearTimeout(saveDebounce);
+    saveDebounce=setTimeout(function(){writeToFile(d);},800);
+  }
+  if(_sbReady){
+    clearTimeout(_saveDebounceSb);
+    _saveDebounceSb=setTimeout(function(){
+      // Sync every project (cheap upserts; only changed rows matter to Postgres)
+      Object.values(d.projects||{}).forEach(function(proj){ sbUpsertProject(proj); });
+    }, 600);
+  }
+}
+
+function writeToFile(d){
+  if(!fileHandle) return;
+  var json=JSON.stringify(d);
+  fileHandle.createWritable().then(function(w){
+    var cur=document.documentElement.outerHTML;
+    var updated=cur.replace(
+      /()([\s\S]*?)(<\/script>)/,
+      '$1'+json.replace(/\$/g,'$$$$')+'$3'
+    );
+    w.write(updated);
+    w.close();
+  }).catch(function(e){console.warn('Write failed:',e);});
+}
+
+function requestFileAccess(){
+  if(!window.showSaveFilePicker){
+    alert('File auto-save requires Chrome or Edge desktop. Your data is saved in the browser.');
+    return;
+  }
+  window.showSaveFilePicker({
+    suggestedName:'PM_Playbook.html',
+    types:[{description:'PM Playbook',accept:{'text/html':['.html']}}]
+  }).then(function(fh){
+    fileHandle=fh;
+    writeToFile(loadApp());
+    updateAutoSaveUI(true);
+  }).catch(function(e){
+    if(e.name!=='AbortError') console.warn('File access:',e);
+  });
+}
+
+function updateAutoSaveUI(on){
+  var btn=document.getElementById('autosave-btn');
+  if(btn){btn.textContent=on?'Auto-Save On':'Allow Auto-Save';}
+}
+
+function updateCloudSyncUI(on){
+  var el=document.getElementById('cloud-sync-ind');
+  if(el){ el.textContent = on ? 'Synced to cloud' : 'Offline (saved on this device only)'; }
+}
+
+function getProject(id){
+  var app=loadApp();
+  return app.projects[id]||{id:id,name:'',checks:{},data:{},created:Date.now(),updated:Date.now()};
+}
+function saveProject(proj){
+  var app=loadApp();
+  proj.updated=Date.now();
+  app.projects[proj.id]=proj;
+  saveApp(app);
+}
+function getKey(k){var p=getProject(currentProjectId);return p.data?p.data[k]:null;}
+function setKey(k,v){var p=getProject(currentProjectId);if(!p.data)p.data={};p.data[k]=v;saveProject(p);}
+function saveField(sk,f,v){var d=getKey(sk)||{};d[f]=v;setKey(sk,d);}
+
+function showSaved(){
+  var el=document.getElementById('save-ind');
+  if(!el)return;
+  el.textContent='Saved';
+  el.className='save-indicator saved';
+  setTimeout(function(){
+    el.textContent=fileHandle?'Auto-saving to file':'Saved to browser';
+    el.className='save-indicator';
+  },1500);
+}
+
+// -- PAGES ------------------------------------------------------------------
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var el=document.getElementById('page-'+id);
+  if(el) el.classList.add('active');
+}
+
+function goHome(){
+  currentProjectId=null;
+  currentPhases=null;
+  closeModal();
+  renderHome();
+  showPage('home');
+}
+
+function startNewProject(){
+  var id='proj_'+Date.now();
+  saveProject({id:id,name:'',checks:{},data:{},created:Date.now(),updated:Date.now()});
+  openProject(id);
+}
+
+function createMyRecProject(){
+  var id='proj_myrec_'+Date.now();
+  var app=loadApp();
+  var proj={id:id,name:'MyRec Public Side Enhancements',phaseSet:'myrec',
+    checks:{},data:Object.assign({},MYREC_SEED),created:Date.now(),updated:Date.now()};
+  app.projects[id]=proj;
+  saveApp(app);
+  openProject(id);
+}
+
+function openProject(id){
+  try {
+    currentProjectId=id;
+    var proj=getProject(id);
+    currentPhases=(proj.phaseSet==='myrec')?buildMyRecPhases():PHASES;
+    var inp=document.getElementById('project-name-input');
+    if(inp) inp.value=proj.name||'';
+    var sb=document.getElementById('save-name-btn');
+    if(sb) sb.classList.remove('visible');
+    buildPhasesUI();
+    loadChecks();
+    updateProgress();
+    showPage('project');
+  } catch(e) {
+    alert('openProject error: '+e.message+' at '+e.stack);
+  }
+}
+
+function onNameInput(){
+  var sb=document.getElementById('save-name-btn');
+  if(sb) sb.classList.add('visible');
+}
+function saveName(){
+  var name=document.getElementById('project-name-input').value.trim();
+  var proj=getProject(currentProjectId);
+  proj.name=name;
+  saveProject(proj);
+  var sb=document.getElementById('save-name-btn');
+  if(sb) sb.classList.remove('visible');
+  showSaved();
+}
+function deleteCurrentProject(){
+  var proj=getProject(currentProjectId);
+  if(!confirm('Delete "'+( proj.name||'Untitled')+'\"? Cannot be undone.')) return;
+  var app=loadApp();
+  delete app.projects[currentProjectId];
+  saveApp(app);
+  sbDeleteProject(currentProjectId);
+  goHome();
+}
+
+// -- TASK IDS ---------------------------------------------------------------
+function getAllIds(p){
+  if(p.sections) return p.sections.reduce(function(a,s){return a.concat(s.tasks.map(function(t){return t.id;}));}, []);
+  return p.tasks.map(function(t){return t.id;});
+}
+function getAllTaskIds(){
+  var src=currentPhases||PHASES;
+  var ids=[];
+  src.forEach(function(p){getAllIds(p).forEach(function(id){ids.push(id);});});
+  return ids;
+}
+
+// -- HOME -------------------------------------------------------------------
+function renderHome(){
+  var app=loadApp();
+  var projects=Object.values(app.projects).sort(function(a,b){return b.updated-a.updated;});
+  var grid=document.getElementById('projects-grid');
+  var empty=document.getElementById('empty-state');
+  var label=document.getElementById('projects-label');
+  if(!grid) return;
+  if(projects.length===0){
+    grid.innerHTML=''; empty.style.display='block'; label.style.display='none'; return;
+  }
+  empty.style.display='none'; label.style.display='block';
+  grid.innerHTML='';
+  projects.forEach(function(proj){
+    var pSrc=(proj.phaseSet==='myrec')?buildMyRecPhases():PHASES;
+    var totalT=pSrc.reduce(function(a,p){return a+getAllIds(p).length;},0);
+    var done=Object.values(proj.checks||{}).filter(Boolean).length;
+    var pct=totalT>0?Math.round(done/totalT*100):0;
+    var nm=proj.name||'Untitled project';
+    var dt=new Date(proj.updated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    var card=document.createElement('div');
+    card.className='project-card'; card.id='card-'+proj.id;
+    var inner=document.createElement('div');
+    inner.className='project-clickable'; inner.style.cursor='pointer';
+    inner.innerHTML=(
+      '<div class="project-card-name">'+nm+'</div>'
+      +'<div class="project-card-bar"><div class="project-card-fill" style="width:'+pct+'%"></div></div>'
+      +'<div class="project-card-footer">'
+      +'<span class="project-card-pct">'+pct+'% complete ('+done+'/'+totalT+' steps)</span>'
+      +'<span class="project-card-date">Updated '+dt+'</span>'
+      +'</div>'
+    );
+    inner.addEventListener('click',function(){openProject(proj.id);});
+    var delRow=document.createElement('div'); delRow.className='card-del-row';
+    var delBtn=document.createElement('button'); delBtn.className='card-del-btn';
+    delBtn.id='delbtn-'+proj.id; delBtn.textContent='Delete project';
+    delBtn.addEventListener('click',function(){startCardDelete(proj.id);});
+    var delConfirm=document.createElement('span'); delConfirm.className='card-del-confirm';
+    delConfirm.id='delconfirm-'+proj.id; delConfirm.style.display='none';
+    var sureTxt=document.createElement('span'); sureTxt.className='card-del-sure'; sureTxt.textContent='Are you sure?';
+    var yesBtn=document.createElement('button'); yesBtn.className='card-del-yes'; yesBtn.textContent='Yes, delete';
+    yesBtn.addEventListener('click',function(){doCardDelete(proj.id);});
+    var noBtn=document.createElement('button'); noBtn.className='card-del-no'; noBtn.textContent='Cancel';
+    noBtn.addEventListener('click',function(){cancelCardDelete(proj.id);});
+    delConfirm.appendChild(sureTxt); delConfirm.appendChild(yesBtn); delConfirm.appendChild(noBtn);
+    delRow.appendChild(delBtn); delRow.appendChild(delConfirm);
+    card.appendChild(inner); card.appendChild(delRow); grid.appendChild(card);
+  });
+}
+
+function startCardDelete(id){
+  document.getElementById('delbtn-'+id).style.display='none';
+  document.getElementById('delconfirm-'+id).style.display='flex';
+}
+function cancelCardDelete(id){
+  document.getElementById('delbtn-'+id).style.display='';
+  document.getElementById('delconfirm-'+id).style.display='none';
+}
+function doCardDelete(id){
+  var app=loadApp(); delete app.projects[id]; saveApp(app); sbDeleteProject(id); renderHome();
+}
+
+// -- CHECKLIST --------------------------------------------------------------
+var state={};var totalTasks=0;
+
+function loadChecks(){
+  Object.keys(state).forEach(function(k){delete state[k];});
+  var saved=getProject(currentProjectId).checks||{};
+  Object.assign(state,saved);
+  getAllTaskIds().forEach(function(id){
+    var cb=document.getElementById('cb-'+id);
+    var tk=document.getElementById('task-'+id);
+    if(!cb||!tk) return;
+    if(state[id]){cb.classList.add('checked');tk.classList.add('done');}
+    else{cb.classList.remove('checked');tk.classList.remove('done');}
+  });
+}
+
+function saveChecks(){
+  var proj=getProject(currentProjectId);
+  proj.checks=Object.assign({},state);
+  saveProject(proj);
+}
+
+function toggleTask(id){
+  state[id]=!state[id];
+  var cb=document.getElementById('cb-'+id);
+  var tk=document.getElementById('task-'+id);
+  if(state[id]){cb.classList.add('checked');tk.classList.add('done');}
+  else{cb.classList.remove('checked');tk.classList.remove('done');}
+  saveChecks();
+  updateProgress();
+}
+
+function updateProgress(){
+  var src=currentPhases||PHASES;
+  var done=Object.values(state).filter(Boolean).length;
+  var total=getAllTaskIds().length;
+  var pct=total>0?Math.round(done/total*100):0;
+  var pf=document.getElementById('pf'); if(pf) pf.style.width=pct+'%';
+  var meta=document.getElementById('meta'); if(meta) meta.textContent=done+' of '+total+' done';
+  var banner=document.getElementById('done-banner');
+  if(banner) banner.style.display=(done===total&&total>0)?'flex':'none';
+  src.forEach(function(p){
+    var ids=getAllIds(p);
+    var pd=ids.filter(function(id){return state[id];}).length;
+    var ce=document.getElementById('count-'+p.id); if(ce) ce.textContent=pd+'/'+ids.length;
+    var ie=document.getElementById('icon-'+p.id);
+    if(ie){
+      if(pd===ids.length&&ids.length>0){
+        ie.style.background='#E8F4EE';ie.style.color='#1D6A4A';
+        ie.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else {
+        ie.style.background=p.bg;ie.style.color=p.tc;
+        ie.innerHTML=p.label.replace('Phase ','');
+      }
+    }
+  });
+}
+
+// -- PHASE UI ---------------------------------------------------------------
+function buildTaskEl(t){
+  totalTasks++;
+  var div=document.createElement('div');
+  div.className='task';div.id='task-'+t.id;
+  var cb=document.createElement('div');
+  cb.className='cb';cb.id='cb-'+t.id;
+  cb.innerHTML='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  cb.onclick=function(e){e.stopPropagation();toggleTask(t.id);};
+  var txt=document.createElement('div');
+  txt.className='task-text';txt.style.cursor='pointer';
+  txt.innerHTML='<div class="task-title">'+t.title+'</div><div class="task-desc">'+t.desc+'</div>';
+  txt.onclick=function(){openModal(t.id,t.modal||'generic');};
+  var btn=document.createElement('button');
+  btn.className='open-btn';btn.title='Open workspace';
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+  btn.onclick=function(){openModal(t.id,t.modal||'generic');};
+  div.appendChild(cb);div.appendChild(txt);div.appendChild(btn);
+  return div;
+}
+
+function buildPhasesUI(){
+  totalTasks=0;
+  var src=currentPhases||PHASES;
+  var container=document.getElementById('phases-container');
+  if(!container) return;
+  container.innerHTML='';
+  var lastCh='';
+  src.forEach(function(p){
+    if(p.ch!==lastCh){
+      var lbl=document.createElement('div');lbl.className='chapter-label';lbl.textContent=p.ch;
+      container.appendChild(lbl);lastCh=p.ch;
+    }
+    var phase=document.createElement('div');phase.className='phase';
+    var head=document.createElement('div');head.className='phase-head';
+    head.innerHTML=(
+      '<div class="phase-icon" id="icon-'+p.id+'" style="background:'+p.bg+';color:'+p.tc+'">'+p.label.replace('Phase ','')+'</div>'
+      +'<div class="phase-info"><div class="phase-name">'+p.name+'</div><div class="phase-sub">'+p.label+'</div></div>'
+      +'<div class="phase-right"><span class="phase-count" id="count-'+p.id+'">0/'+getAllIds(p).length+'</span>'
+      +'<svg class="phase-chev" id="chev-'+p.id+'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>'
+    );
+    var body=document.createElement('div');body.className='phase-body';body.id='body-'+p.id;
+    if(p.sections){
+      p.sections.forEach(function(s){
+        var sl=document.createElement('div');sl.className='section-divider';sl.textContent=s.label;body.appendChild(sl);
+        s.tasks.forEach(function(t){body.appendChild(buildTaskEl(t));});
+      });
+    } else {
+      p.tasks.forEach(function(t){body.appendChild(buildTaskEl(t));});
+    }
+    if(p.tip){
+      var tip=document.createElement('div');tip.className='tip-box';
+      tip.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B0AA9F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>'+p.tip+'</span>';
+      body.appendChild(tip);
+    }
+    head.onclick=function(){
+      var open=body.classList.contains('open');
+      body.classList.toggle('open',!open);
+      document.getElementById('chev-'+p.id).classList.toggle('open',!open);
+    };
+    phase.appendChild(head);phase.appendChild(body);container.appendChild(phase);
+  });
+}
+
+// -- MODAL ------------------------------------------------------------------
+function findTask(id){
+  var src=currentPhases||PHASES;
+  for(var i=0;i<src.length;i++){
+    var p=src[i];
+    if(!p) continue;
+    var all=p.sections?p.sections.reduce(function(a,s){return a.concat(s.tasks);},[]):(p.tasks||[]);
+    for(var j=0;j<all.length;j++){if(all[j]&&all[j].id===id)return all[j];}
+  }
+  return {id:id,title:'',desc:'',modal:'generic'};
+}
+
+function openModal(taskId,modalKey){
+  try {
+    var task=findTask(taskId);
+    var panel=document.getElementById('modal-panel');
+    var container=document.getElementById('phases-container');
+    // Move panel to body and position at current scroll
+    if(panel.parentNode!==document.body) document.body.appendChild(panel);
+    var scrollY=window.pageYOffset||document.documentElement.scrollTop||0;
+    var vpH=window.innerHeight||document.documentElement.clientHeight||700;
+    panel.style.top=scrollY+'px';
+    panel.style.minHeight=vpH+'px';
+    document.getElementById('modal-title').textContent=task.title;
+    document.getElementById('modal-body').innerHTML=buildModalHTML(modalKey,taskId);
+    panel.classList.add('open');
+    document.body.style.overflow='hidden';
+    var hp=document.getElementById('hyp-prev');
+    if(hp){refreshHyp();document.querySelectorAll('.hyp-field textarea').forEach(function(el){el.addEventListener('input',refreshHyp);});}
+    var rab=document.getElementById('rm-add');if(rab)rab.onclick=function(){addRoadmapRow();refreshEl('roadmap-list',renderRoadmapRows());};
+    var sab=document.getElementById('sc-add');if(sab)sab.onclick=function(){addScoringRow();refreshEl('scoring-list',renderScoringRows());};
+    var kab=document.getElementById('kano-add');if(kab)kab.onclick=function(){addKanoRow();refreshEl('kano-list',renderKanoRows());};
+    var qab=document.getElementById('q-add');if(qab)qab.onclick=function(){addInterviewQ();refreshEl('q-list',renderInterviewQs());};
+    var iab=document.getElementById('interview-add');if(iab)iab.onclick=function(){addInterview();refreshEl('interview-list',renderInterviewCards());};
+  } catch(e){ console.warn('Modal error:',e.message); }
+}
+
+function closeModal(){
+  var panel=document.getElementById('modal-panel');
+  if(panel) panel.classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function handleOverlayClick(e){}
+
+function refreshHyp(){
+  var el=document.getElementById('hyp-prev'); if(!el)return;
+  var d=getKey('hypothesis')||{};
+  var p=d.persona||'[persona]',pa=d.pain||'[pain]',s=d.solution||'[solution]',o=d.outcome||'[outcome]',t=d.tradeoffs||'[trade-offs]';
+  el.innerHTML='We believe <strong>'+p+'</strong> experience <strong>'+pa+'</strong>. By building <strong>'+s+'</strong> we expect <strong>'+o+'</strong>, although they will need to accept <strong>'+t+'</strong>.';
+}
+
+function refreshEl(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;}
+
+// helper: build a textarea that saves to a field
+function ta(sk,f,ph,rows){
+  var v=(getKey(sk)||{})[f]||'';
+  return '<textarea class="big-ta" rows="'+(rows||3)+'" placeholder="'+ph+'" oninput="saveField(\''+sk+'\',\''+f+'\',this.value)">'+v+'</textarea>';
+}
+function inp(sk,f,ph){
+  var v=(getKey(sk)||{})[f]||'';
+  return '<input class="big-inp" placeholder="'+ph+'" value="'+v.replace(/"/g,'&quot;')+'" oninput="saveField(\''+sk+'\',\''+f+'\',this.value)">';
+}
+function mwhy(text){return '<p class="modal-why">'+text+'</p>';}
+function mws(html){return '<div class="modal-section-title">Your workspace</div>'+html;}
+
+function mdiag(svg){return '<div style="margin:0 0 16px;border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--bg)">'+svg+'</div>';}
+function mfld(label,ta_html){return '<div class="modal-field"><div class="modal-field-label">'+label+'</div>'+ta_html+'</div>';}
+
+// -- MODAL CONTENT ----------------------------------------------------------
+const DIAGRAMS = {
+  aarrr:'<svg width="100%" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#B0AA9F" stroke-width="1.5"/></marker></defs><rect x="20" y="50" width="116" height="92" rx="8" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="0.5"/><text x="78" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="#1A4A6E">Acquisition</text><text x="78" y="105" text-anchor="middle" font-size="11" fill="#1A4A6E">Signup rate</text><line x1="136" y1="96" x2="144" y2="96" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrA)"/><rect x="144" y="46" width="116" height="100" rx="8" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="202" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="#0D5038">Activation</text><text x="202" y="105" text-anchor="middle" font-size="11" fill="#0D5038">Time to first</text><text x="202" y="118" text-anchor="middle" font-size="11" fill="#0D5038">key action</text><line x1="260" y1="96" x2="268" y2="96" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrA)"/><rect x="268" y="42" width="116" height="108" rx="8" fill="#FDECC8" stroke="#6B4200" stroke-width="0.5"/><text x="326" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="#6B4200">Retention</text><text x="326" y="105" text-anchor="middle" font-size="11" fill="#6B4200">Returning</text><text x="326" y="118" text-anchor="middle" font-size="11" fill="#6B4200">DAU/MAU</text><line x1="384" y1="96" x2="392" y2="96" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrA)"/><rect x="392" y="46" width="116" height="100" rx="8" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="450" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="#7A2E14">Revenue</text><text x="450" y="105" text-anchor="middle" font-size="11" fill="#7A2E14">LTV</text><line x1="508" y1="96" x2="516" y2="96" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrA)"/><rect x="516" y="50" width="116" height="92" rx="8" fill="#DDD9F8" stroke="#3A2F8A" stroke-width="0.5"/><text x="574" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="#3A2F8A">Referral</text><text x="574" y="105" text-anchor="middle" font-size="11" fill="#3A2F8A">Invite rate</text><text x="326" y="178" text-anchor="middle" font-size="12" fill="#7A756C">Every large drop-off between stages is a candidate opportunity</text></svg>',
+  moscow:'<svg width="100%" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="20" width="640" height="48" rx="8" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="40" y="50" font-size="13" font-weight="500" fill="#7A2E14">Must Have</text><text x="540" y="50" text-anchor="end" font-size="11" fill="#7A2E14">Remove it -- the product breaks</text><rect x="20" y="76" width="640" height="44" rx="8" fill="#FDECC8" stroke="#6B4200" stroke-width="0.5"/><text x="40" y="103" font-size="13" font-weight="500" fill="#6B4200">Should Have</text><text x="540" y="103" text-anchor="end" font-size="11" fill="#6B4200">Valuable, not load-bearing</text><rect x="20" y="128" width="640" height="44" rx="8" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="40" y="155" font-size="13" font-weight="500" fill="#0D5038">Could Have</text><text x="540" y="155" text-anchor="end" font-size="11" fill="#0D5038">Polish for a later version</text><rect x="20" y="180" width="640" height="44" rx="8" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="0.5"/><text x="40" y="207" font-size="13" font-weight="500" fill="#1A4A6E">Will Not Have (Now)</text><text x="540" y="207" text-anchor="end" font-size="11" fill="#1A4A6E">Explicit exclusions</text></svg>',
+  roi:'<svg width="100%" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg"><rect x="80" y="40" width="270" height="120" fill="#C8EDE0" opacity="0.5"/><rect x="350" y="40" width="270" height="120" fill="#D4E9F7" opacity="0.5"/><rect x="80" y="160" width="270" height="120" fill="#FDECC8" opacity="0.5"/><rect x="350" y="160" width="270" height="120" fill="#FAD9CC" opacity="0.5"/><line x1="80" y1="40" x2="80" y2="280" stroke="#7A756C" stroke-width="1.2"/><line x1="80" y1="280" x2="620" y2="280" stroke="#7A756C" stroke-width="1.2"/><text x="48" y="160" text-anchor="middle" font-size="11" fill="#7A756C" transform="rotate(-90,48,160)">Value</text><text x="350" y="300" text-anchor="middle" font-size="11" fill="#7A756C">Effort</text><text x="215" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#0D5038">Quick Wins</text><text x="215" y="98" text-anchor="middle" font-size="11" fill="#0D5038">Low effort, high value</text><text x="485" y="80" text-anchor="middle" font-size="13" font-weight="500" fill="#1A4A6E">Major Projects</text><text x="485" y="98" text-anchor="middle" font-size="11" fill="#1A4A6E">High effort, high value</text><text x="215" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#6B4200">Fill-In Work</text><text x="215" y="218" text-anchor="middle" font-size="11" fill="#6B4200">Low effort, low value</text><text x="485" y="200" text-anchor="middle" font-size="13" font-weight="500" fill="#7A2E14">Time Sinkers</text><text x="485" y="218" text-anchor="middle" font-size="11" fill="#7A2E14">High effort, low value</text></svg>',
+  kano:'<svg width="100%" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg"><line x1="60" y1="30" x2="60" y2="240" stroke="#B0AA9F" stroke-width="1"/><line x1="60" y1="240" x2="600" y2="240" stroke="#B0AA9F" stroke-width="1"/><text x="350" y="265" text-anchor="middle" font-size="11" fill="#7A756C">Functionality (how much is built)</text><path d="M 100 220 Q 340 220 580 60" stroke="#7A2E14" stroke-width="2" fill="none"/><text x="600" y="60" text-anchor="end" font-size="11" fill="#7A2E14">Delighter</text><line x1="100" y1="140" x2="545" y2="140" stroke="#1A4A6E" stroke-width="2"/><text x="600" y="140" text-anchor="end" font-size="11" fill="#1A4A6E">Performance</text><path d="M 100 150 Q 340 150 580 235" stroke="#0D5038" stroke-width="2" fill="none"/><text x="600" y="240" text-anchor="end" font-size="11" fill="#0D5038">Basic</text><text x="60" y="20" font-size="11" fill="#7A756C">Satisfied</text><text x="20" y="245" font-size="11" fill="#7A756C">Dissatisfied</text></svg>',
+  swot:'<svg width="100%" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="20" width="310" height="105" rx="8" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="40" y="48" font-size="13" font-weight="500" fill="#0D5038">Strengths</text><text x="40" y="68" font-size="11" fill="#0D5038">What do we do well?</text><rect x="350" y="20" width="310" height="105" rx="8" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="370" y="48" font-size="13" font-weight="500" fill="#7A2E14">Weaknesses</text><text x="370" y="68" font-size="11" fill="#7A2E14">Where do we fall short?</text><rect x="20" y="135" width="310" height="105" rx="8" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="0.5"/><text x="40" y="163" font-size="13" font-weight="500" fill="#1A4A6E">Opportunities</text><text x="40" y="183" font-size="11" fill="#1A4A6E">What trends can we leverage?</text><rect x="350" y="135" width="310" height="105" rx="8" fill="#DDD9F8" stroke="#3A2F8A" stroke-width="0.5"/><text x="370" y="163" font-size="13" font-weight="500" fill="#3A2F8A">Threats</text><text x="370" y="183" font-size="11" fill="#3A2F8A">What risks are out there?</text></svg>',
+  journey:'<svg width="100%" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrJ" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#B0AA9F" stroke-width="1.5"/></marker></defs><path d="M 40 120 Q 150 60 260 130 T 480 90 T 640 60" stroke="#3A2F8A" stroke-width="2" fill="none"/><circle cx="40" cy="120" r="5" fill="#DDD9F8" stroke="#3A2F8A" stroke-width="1.5"/><circle cx="260" cy="130" r="5" fill="#FAD9CC" stroke="#7A2E14" stroke-width="1.5"/><circle cx="480" cy="90" r="5" fill="#FDECC8" stroke="#6B4200" stroke-width="1.5"/><circle cx="640" cy="60" r="5" fill="#C8EDE0" stroke="#0D5038" stroke-width="1.5"/><text x="40" y="150" text-anchor="middle" font-size="11" fill="#3A2F8A">Current state</text><text x="260" y="160" text-anchor="middle" font-size="11" fill="#7A2E14">Hindrance</text><text x="480" y="120" text-anchor="middle" font-size="11" fill="#6B4200">Motivation</text><text x="630" y="40" text-anchor="middle" font-size="11" fill="#0D5038">Desired state</text><text x="340" y="185" text-anchor="middle" font-size="12" fill="#7A756C">Map the emotional arc alongside each step the user takes</text></svg>',
+  vpc:'<svg width="100%" viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg"><circle cx="180" cy="120" r="100" fill="#D4E9F7" opacity="0.45" stroke="#1A4A6E" stroke-width="0.5"/><text x="180" y="50" text-anchor="middle" font-size="13" font-weight="500" fill="#1A4A6E">Customer profile</text><text x="180" y="105" text-anchor="middle" font-size="11" fill="#1A4A6E">Jobs</text><text x="180" y="125" text-anchor="middle" font-size="11" fill="#1A4A6E">Pains</text><text x="180" y="145" text-anchor="middle" font-size="11" fill="#1A4A6E">Gains</text><rect x="380" y="40" width="280" height="160" rx="10" fill="#C8EDE0" opacity="0.45" stroke="#0D5038" stroke-width="0.5"/><text x="520" y="65" text-anchor="middle" font-size="13" font-weight="500" fill="#0D5038">Value map</text><text x="520" y="105" text-anchor="middle" font-size="11" fill="#0D5038">Products &amp; services</text><text x="520" y="128" text-anchor="middle" font-size="11" fill="#0D5038">Pain relievers</text><text x="520" y="151" text-anchor="middle" font-size="11" fill="#0D5038">Gain creators</text><text x="340" y="120" text-anchor="middle" font-size="16" fill="#7A756C">=</text><text x="340" y="220" text-anchor="middle" font-size="12" fill="#7A756C">Fit happens where the value map matches the customer profile</text></svg>',
+  bmc:'<svg width="100%" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="20" width="130" height="180" rx="6" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="0.5"/><text x="85" y="40" text-anchor="middle" font-size="11" font-weight="500" fill="#1A4A6E">Key Partners</text><rect x="155" y="20" width="130" height="85" rx="6" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="220" y="40" text-anchor="middle" font-size="11" font-weight="500" fill="#0D5038">Key Activities</text><rect x="155" y="110" width="130" height="90" rx="6" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="220" y="130" text-anchor="middle" font-size="11" font-weight="500" fill="#0D5038">Key Resources</text><rect x="290" y="20" width="100" height="180" rx="6" fill="#FDECC8" stroke="#6B4200" stroke-width="0.5"/><text x="340" y="40" text-anchor="middle" font-size="11" font-weight="500" fill="#6B4200">Value Props</text><rect x="395" y="20" width="130" height="85" rx="6" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="460" y="40" text-anchor="middle" font-size="11" font-weight="500" fill="#7A2E14">Relationships</text><rect x="395" y="110" width="130" height="90" rx="6" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="460" y="130" text-anchor="middle" font-size="11" font-weight="500" fill="#7A2E14">Channels</text><rect x="530" y="20" width="130" height="180" rx="6" fill="#DDD9F8" stroke="#3A2F8A" stroke-width="0.5"/><text x="595" y="40" text-anchor="middle" font-size="11" font-weight="500" fill="#3A2F8A">Segments</text><rect x="20" y="205" width="320" height="0" fill="none"/></svg>',
+  engbalance:'<svg width="100%" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg"><polygon points="340,30 540,190 140,190" fill="none" stroke="#7A756C" stroke-width="1"/><circle cx="340" cy="30" r="6" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="1.5"/><text x="340" y="15" text-anchor="middle" font-size="12" font-weight="500" fill="#1A4A6E">Time</text><circle cx="540" cy="190" r="6" fill="#C8EDE0" stroke="#0D5038" stroke-width="1.5"/><text x="540" y="208" text-anchor="middle" font-size="12" font-weight="500" fill="#0D5038">Quality</text><circle cx="140" cy="190" r="6" fill="#FAD9CC" stroke="#7A2E14" stroke-width="1.5"/><text x="140" y="208" text-anchor="middle" font-size="12" font-weight="500" fill="#7A2E14">Scope</text><text x="340" y="120" text-anchor="middle" font-size="11" fill="#7A756C">Pick two,</text><text x="340" y="135" text-anchor="middle" font-size="11" fill="#7A756C">the third bends</text></svg>',
+  designsprint:'<svg width="100%" viewBox="0 0 680 140" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arrD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#B0AA9F" stroke-width="1.5"/></marker></defs><rect x="10" y="30" width="105" height="60" rx="8" fill="#D4E9F7" stroke="#1A4A6E" stroke-width="0.5"/><text x="62" y="65" text-anchor="middle" font-size="12" font-weight="500" fill="#1A4A6E">Understand</text><line x1="115" y1="60" x2="123" y2="60" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrD)"/><rect x="123" y="30" width="105" height="60" rx="8" fill="#C8EDE0" stroke="#0D5038" stroke-width="0.5"/><text x="175" y="65" text-anchor="middle" font-size="12" font-weight="500" fill="#0D5038">Diverge</text><line x1="228" y1="60" x2="236" y2="60" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrD)"/><rect x="236" y="30" width="105" height="60" rx="8" fill="#FDECC8" stroke="#6B4200" stroke-width="0.5"/><text x="288" y="65" text-anchor="middle" font-size="12" font-weight="500" fill="#6B4200">Decide</text><line x1="341" y1="60" x2="349" y2="60" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrD)"/><rect x="349" y="30" width="105" height="60" rx="8" fill="#FAD9CC" stroke="#7A2E14" stroke-width="0.5"/><text x="401" y="65" text-anchor="middle" font-size="12" font-weight="500" fill="#7A2E14">Prototype</text><line x1="454" y1="60" x2="462" y2="60" stroke="#B0AA9F" stroke-width="1.5" marker-end="url(#arrD)"/><rect x="462" y="30" width="105" height="60" rx="8" fill="#DDD9F8" stroke="#3A2F8A" stroke-width="0.5"/><text x="514" y="65" text-anchor="middle" font-size="12" font-weight="500" fill="#3A2F8A">Test</text><text x="290" y="120" text-anchor="middle" font-size="12" fill="#7A756C">5 days, one validated direction</text></svg>'
+};
+
+function buildModalHTML(modalKey,taskId){
+  switch(modalKey){
+    case 'generic': {
+      var v=(getKey('note_'+taskId)||{}).notes||'';
+      return mwhy('Add your notes and findings for this step.')+mws(
+        '<textarea class="big-ta" rows="6" placeholder="Notes..." oninput="saveField(\'note_'+taskId+'\',\'notes\',this.value)">'+v+'</textarea>'
+      );
+    }
+    case 'notes': {
+      var v=(getKey('note_'+taskId)||{}).notes||'';
+      return mwhy('Add your notes and findings for this step.')+mws(
+        '<textarea class="big-ta" rows="6" placeholder="Notes..." oninput="saveField(\'note_'+taskId+'\',\'notes\',this.value)">'+v+'</textarea>'
+      );
+    }
+    case 'hypothesis': {
+      return mwhy('A hypothesis gives your team a shared, testable statement to rally around.')+mws(
+        mfld('Persona / Customer Segment', ta('hypothesis','persona','e.g. Recreation coordinators...',3))+
+        mfld('The Pain / Problem', ta('hypothesis','pain','e.g. ...struggle to manage bookings...',3))+
+        mfld('The Proposed Solution', ta('hypothesis','solution','e.g. ...adding an overnight booking feature...',3))+
+        mfld('Expected Outcome / Success Metric', ta('hypothesis','outcome','e.g. ...increase bookings by 30% within 6 months.',2))+
+        mfld('Trade-offs the Customer Must Accept', ta('hypothesis','tradeoffs','e.g. They would need to learn a new flow...',2))+
+        '<div class="hyp-preview"><div class="modal-field-label">Your hypothesis statement</div><div id="hyp-prev"></div></div>'
+      );
+    }
+    case 'why':
+      return mwhy('Your Why is not about profit. It anchors long-term strategy, culture, and success metrics.')+mws(
+        mfld('Why does this company exist?', ta('why','why','e.g. We exist to make outdoor recreation accessible...',3))+
+        mfld('How do we do it?', ta('why','how','e.g. By building intuitive software...',3))+
+        mfld('What do we do?', ta('why','what','e.g. Recreation management software for parks...',2))
+      );
+    case 'fivec':
+      return mwhy('The 5C framework helps you understand a company situation so you can form an opportunity hypothesis.')+mws(
+        mfld('Company', ta('fivec','company','Technology, culture, capabilities, goals...',3))+
+        mfld('Customers', ta('fivec','customers','Who are they? Segments, buying behavior, needs...',3))+
+        mfld('Collaborators', ta('fivec','collaborators','Distributors, suppliers, logistics...',2))+
+        mfld('Competitors', ta('fivec','competitors','Who competes? Strengths, weaknesses, positioning...',3))+
+        mfld('Climate', ta('fivec','climate','Cultural, regulatory, technological trends...',3))
+      );
+    case 'persona':
+      return mwhy('Personas should be built around shared problems, pains, and desires -- not demographics or age.')+mws(
+        mfld('Name and Role', ta('persona','name','e.g. Sarah, Resident / Parent',1))+
+        mfld('Their Goals', ta('persona','goals','What are they trying to achieve?',3))+
+        mfld('Key Pains / Problems', ta('persona','pains','What frustrates them? What slows them down?',3))+
+        mfld('How They Measure Success', ta('persona','success','What does winning look like for them?',2))+
+        mfld('Context and Constraints', ta('persona','context','Time available, tech savviness, how they currently solve this...',3))
+      );
+    case 'nps':
+      return mwhy('NPS runs from -100 to 100. Ask: On a scale of 1-10, how likely are you to recommend us? Promoters=9-10, Detractors=0-6.')+mws(
+        mfld('Current NPS Score', inp('nps','score','e.g. 42'))+
+        mfld('Promoters say...', ta('nps','promoters','What do happy customers love?',3))+
+        mfld('Detractors say...', ta('nps','detractors','What are unhappy customers frustrated by?',3))+
+        mfld('Action Items', ta('nps','actions','What will you do differently based on this feedback?',3))
+      );
+    case 'roadmap':
+      return mwhy('Keep short-term items detailed and long-term items intentionally vague. Software: Now=3-6 months, Next=6-12 months.')+mws(
+        '<div id="roadmap-list">'+renderRoadmapRows()+'</div>'+
+        '<button class="add-row-btn" id="rm-add">+ Add item</button>'
+      );
+    case 'scoring':
+      return mwhy('Use an exponential scale (1, 2, 4, 8, 16) to score value and cost. Score = value divided by cost. Pursue the highest scores first.')+mws(
+        '<div class="scoring-header"><span>Opportunity</span><span>Value</span><span>Cost</span><span>Score</span></div>'+
+        '<div id="scoring-list">'+renderScoringRows()+'</div>'+
+        '<button class="add-row-btn" id="sc-add">+ Add opportunity</button>'
+      );
+    case 'swot':
+      return mwhy('If your idea does not connect to at least one top-priority SWOT item, it is likely not the right time to pursue it.')+mdiag(DIAGRAMS.swot)+mws(
+        '<div class="two-col">'+
+        mfld('Strengths', ta('swot','s','What do we do well? What resources do we have?',4))+
+        mfld('Weaknesses', ta('swot','w','Where do we fall short? What could we improve?',4))+
+        mfld('Opportunities', ta('swot','o','What trends can we leverage? What market gaps exist?',4))+
+        mfld('Threats', ta('swot','t','What are competitors doing? Any regulatory risks?',4))+
+        '</div>'
+      );
+    case 'internalcheck': {
+      var items=['Is the opportunity aligned with the product and company vision?','Does it support the product core function?','Can we build it well with our current capabilities?','Does it contribute positively to our key success metrics?','Do we have analytics, survey data, or bug reports that support this?','Is it required to meet a critical business initiative?','Does it help our users win, not just look good internally?','Is it on the roadmap for this year, even indirectly?','Will it still matter in two years?','Will it benefit most users, not just a niche segment?','If it succeeds, do we have the resources to support it?'];
+      var checks_data=getKey('internalcheck')||{};
+      var html='<div class="checklist-items">';
+      items.forEach(function(item,i){
+        var chk=checks_data['q'+i]?'checked':'';
+        html+='<label class="checklist-item"><input type="checkbox" '+chk+' onchange="saveField(\'internalcheck\',\'q'+i+'\',this.checked)"><span>'+item+'</span></label>';
+      });
+      return mwhy('Before investing time in external validation, run this checklist. If any answer is clearly negative, reconsider the opportunity.')+mws(html+'</div>');
+    }
+    case 'roi':
+      return mwhy('Low effort, high value wins are almost always worth doing next. High effort, low value items should be dropped or deferred.')+mdiag(DIAGRAMS.roi)+mws(
+        '<div class="two-col">'+
+        mfld('Do First (Low effort, high value)', ta('roi','tl','Opportunities...',4))+
+        mfld('Plan Carefully (High effort, high value)', ta('roi','tr','Opportunities...',4))+
+        mfld('Fill-in Work (Low effort, low value)', ta('roi','bl','Opportunities...',4))+
+        mfld('Avoid (High effort, low value)', ta('roi','br','Opportunities...',4))+
+        '</div>'
+      );
+    case 'journey':
+      return mwhy('Users already have a way of doing things. Understanding their current state, steps, motivations, hindrances, and desired outcome is essential.')+mdiag(DIAGRAMS.journey)+mws(
+        mfld('Current State', ta('journey','current','How does the user currently think and feel about this problem?',3))+
+        mfld('Journey Steps', ta('journey','steps','What steps do they take today? Include steps outside your product.',3))+
+        mfld('Motivations', ta('journey','motivations','What makes the new solution appealing?',2))+
+        mfld('Hindrances', ta('journey','hindrances','What makes switching hard? What do they like about current solution?',2))+
+        mfld('Desired State', ta('journey','desired','How do they measure success? What does winning look like?',3))
+      );
+    case 'vpc':
+      return mwhy('Gaps between what customers want and what your product provides are your best opportunities.')+mdiag(DIAGRAMS.vpc)+mws(
+        '<div class="two-col">'+
+        mfld('Products and Services', ta('vpc','products','What do you offer?',3))+
+        mfld('Customer Jobs', ta('vpc','jobs','What tasks are they trying to complete?',3))+
+        mfld('Gain Creators', ta('vpc','gaincreat','How do you create value and benefits?',3))+
+        mfld('Gains', ta('vpc','gains','What outcomes do they want?',3))+
+        mfld('Pain Relievers', ta('vpc','painrel','How do you eliminate customer pain?',3))+
+        mfld('Pains', ta('vpc','pains','What obstacles and frustrations do they face?',3))+
+        '</div>'
+      );
+    case 'bmc':
+      return mwhy('The Business Model Canvas lets you document all aspects of your product and company in one place.')+mdiag(DIAGRAMS.bmc)+mws(
+        mfld('Key Partners', ta('bmc','partners','Who outside the company makes the business model work?',2))+
+        mfld('Key Activities', ta('bmc','activities','What tasks must the company do well to deliver its value?',2))+
+        mfld('Key Resources', ta('bmc','resources','What physical, financial, intellectual, or human resources are essential?',2))+
+        mfld('Value Propositions', ta('bmc','value','What benefit or value does this product provide for each persona?',3))+
+        mfld('Customer Relationships', ta('bmc','relationships','What type of relationship do you want with each persona?',2))+
+        mfld('Channels', ta('bmc','channels','How do you reach each persona? Marketing, sales, support, distribution?',2))+
+        mfld('Customer Segments', ta('bmc','segments','Who are the most important personas?',2))+
+        mfld('Cost Structure', ta('bmc','costs','Where do your costs come from?',2))+
+        mfld('Revenue Streams', ta('bmc','revenue','How does the company earn money from each customer segment?',2))
+      );
+    case 'kano':
+      return mwhy('Basic (must-have), Performance satisfiers (customers judge you on these), Delighters (unexpected wow factors). Delighters become satisfiers over time.')+mdiag(DIAGRAMS.kano)+mws(
+        '<div id="kano-list">'+renderKanoRows()+'</div>'+
+        '<button class="add-row-btn" id="kano-add">+ Add feature</button>'
+      );
+    case 'aarrr':
+      return mwhy('Each large dip between stages is a potential opportunity. Fix the highest dips first.')+mdiag(DIAGRAMS.aarrr)+mws(
+        mfld('Acquisition', ta('aarrr','acquisition','How do users currently find your product? Which channels work best?',3))+
+        mfld('Activation', ta('aarrr','activation','What does a first happy experience look like? Where do users drop off?',3))+
+        mfld('Retention', ta('aarrr','retention','Do users come back? What is the retention rate? Where does it drop?',3))+
+        mfld('Referral', ta('aarrr','referral','Do users refer others? What drives referrals?',2))+
+        mfld('Revenue', ta('aarrr','revenue','How do users become paying customers? Where is the conversion drop-off?',2))
+      );
+    case 'interviewqs':
+      return mwhy("Ask about what people currently do, not what they might do. 'Tell me about how you do X today' reveals reality.")+mws(
+        '<div id="q-list">'+renderInterviewQs()+'</div>'+
+        '<button class="add-row-btn" id="q-add">+ Add question</button>'
+      );
+    case 'conclusions':
+      return mwhy('After each interview, immediately pull out 5-10 key points. If nobody is excited after 5 interviews, reconsider the hypothesis.')+mws(
+        '<div id="interview-list">'+renderInterviewCards()+'</div>'+
+        '<button class="add-row-btn" id="interview-add">+ Add interview</button>'+
+        mfld('Overall trend / summary', ta('conclusions','summary','What pattern emerged? Did the hypothesis hold up?',3))
+      );
+    case 'pressrelease':
+      return mwhy('Writing a press release before development forces you to state your target market, the problem, and how you solve it in under a page.')+mws(
+        mfld('Headline', ta('pressrelease','headline','Target market + how it helps + product name',1))+
+        mfld('Summary Paragraph', ta('pressrelease','summary','Cover the key value in 3-5 sentences. Most people only read this far.',4))+
+        mfld('Problem', ta('pressrelease','problem','What specific problem does your target customer face today?',3))+
+        mfld('Solution', ta('pressrelease','solution','How does this product solve that problem?',3))+
+        mfld('PM Quote', ta('pressrelease','pmquote','Quote from you the PM about why this is great...',2))+
+        mfld('Customer Quote', ta('pressrelease','custquote','Fictional customer quote about how it fits their life...',2))+
+        mfld('Conclusion and Call to Action', ta('pressrelease','cta','How to find, sign up for, and use the product...',3))
+      );
+    case 'productreview':
+      return mwhy('A product review forces you to think about what customers will hear. Be honest about trade-offs.')+mws(
+        mfld('What will a reviewer focus on?', ta('productreview','focus','The 2-3 things a reviewer would spend the most time evaluating?',3))+
+        mfld('What trade-offs does the product have?', ta('productreview','tradeoffs','What limitations will a reviewer call out?',3))+
+        mfld('Why should a customer choose this over competitors?', ta('productreview','differentiation','What is the unique, differentiating value?',3))+
+        mfld('Reviewer conclusion', ta('productreview','conclusion','Write the conclusion a fair reviewer would reach.',3))
+      );
+    case 'mvpdefine':
+      return mwhy('The MVP is defined by working backwards from the single most important value your product delivers. Minimum does not mean bad.')+mws(
+        mfld('Overall goal and value statement', ta('mvpdefine','goal','What value does this deliver and what company goal does it serve?',3))+
+        mfld('Feature list with reasons', ta('mvpdefine','features','[Feature] so that [customer can do X]',8))+
+        mfld('Features crossed out / cut (and why)', ta('mvpdefine','cuts','e.g. Multi-language support -- not needed for initial launch',4))+
+        mfld('Delighters to protect', ta('mvpdefine','delighters','Kano wow features -- fight to keep at least one',2))
+      );
+    case 'prd':
+      return mwhy('The PRD is a living document finished only when the product ships. Start private, share progressively, and update at every key decision point.')+mws(
+        mfld('Project title', ta('prd','title','Give this project a unique, identifying name',1))+
+        mfld('Overview', ta('prd','overview','What is this project and why are you doing it now?',3))+
+        mfld('Objectives', ta('prd','objectives','What will customers get? What are your internal goals?',4))+
+        mfld('Success metrics / KPIs', ta('prd','metrics','List only the key metrics you will watch.',3))+
+        mfld('Messaging', ta('prd','messaging','How will marketing describe this in one sentence?',2))+
+        mfld('Timeline / release planning', ta('prd','timeline','Rough milestones and target release date.',3))+
+        mfld('Personas', ta('prd','personas','Who is this for? Which is the primary persona?',2))+
+        mfld('Features IN', ta('prd','featuresin','As a [persona] I want [feature] so that [reason]',6))+
+        mfld('Features OUT', ta('prd','featuresout','What are you NOT building and why?',4))+
+        mfld('Open issues', ta('prd','issues','Unresolved questions',3))+
+        mfld('Q and A', ta('prd','qa','Common questions and answers',4))
+      );
+    case 'moscow': {
+      return mwhy('The single test for a Must Have: if you remove it, does the core outcome still work for the user? If yes without it, it is not a Must Have.')+mdiag(DIAGRAMS.moscow)+mws(
+        mfld('Must Have -- required for the product to function', ta('moscow','must','List each item. One line on why removing it breaks the core outcome.',5))+
+        mfld('Should Have -- valuable if time allows', ta('moscow','should','Items that add real value but are not load-bearing.',4))+
+        mfld('Could Have -- polish for a later version', ta('moscow','could','Nice-to-haves that do not affect the core experience.',3))+
+        mfld('Will Not Have (Now) -- explicit exclusions', ta('moscow','wont','State each exclusion and why, so it does not get silently re-added mid-build.',4))
+      );
+    }
+    case 'simplifiedprd': {
+      return mwhy('A Simplified PRD is a build-ready blueprint, distinct from your Traditional PRD. Write it tight enough that an AI prototyping tool can build directly from it.')+mws(
+        mfld('Vision -- one sentence', ta('simplifiedprd','vision','What does this replace or eliminate for the user, in one sentence?',2))+
+        mfld('Press release', ta('simplifiedprd','pressrelease','Headline + 2-3 sentences: what shipped, who it is for, why it matters now.',4))+
+        mfld('User stories with acceptance criteria', ta('simplifiedprd','stories','Given [context], when the user [does X], then the product [does Y]. List acceptance criteria under each.',6))+
+        mfld('Screens to build', ta('simplifiedprd','screens','Build exactly these screens, nothing else. Name each one and what it must contain.',5))+
+        mfld('Functional requirements', ta('simplifiedprd','functional','Specific, numbered, testable. Include load times, refresh intervals, exact states allowed.',5))+
+        mfld('Smart behaviors / response logic', ta('simplifiedprd','behaviors','If the input matches situation X, the system responds with Y. List each branch in order.',5))+
+        mfld('Technical constraints -- what not to build', ta('simplifiedprd','constraints','No external APIs, no auth, no real backend -- whatever is genuinely out of scope for the prototype.',4))+
+        mfld('Decision log', ta('simplifiedprd','decisions','Each non-obvious choice and the trade-off it protects. Future you will thank present you.',4))
+      );
+    }
+    case 'userscenarios':
+      return mwhy('Write full paragraph stories: setup, action, result for each persona and key use case.')+mws(
+        mfld('User scenario 1 -- Primary persona, primary use case', ta('userscenarios','s1','Setup: Sarah is a resident...\n\nAction: She opens MyRec...\n\nResult: Sarah confirms the booking in under two minutes.',7))+
+        mfld('User scenario 2 -- Secondary persona or edge case', ta('userscenarios','s2','Write a second scenario...',7))+
+        mfld('User scenario 3 -- Onboarding', ta('userscenarios','s3','How does a brand new user discover and first use this feature?',5))
+      );
+    case 'designbrief':
+      return mwhy('The design brief aligns the PM and design lead on what UX you want to create before any wireframes are drawn.')+mws(
+        mfld('UX goal', ta('designbrief','goal','e.g. A booking flow so simple a coordinator completes a reservation in under 3 minutes.',3))+
+        mfld('Key design constraints', ta('designbrief','constraints','e.g. Must work on desktop and tablet. Must match brand guidelines.',3))+
+        mfld('Primary persona the design must serve', ta('designbrief','persona','Summarize the primary persona and their key needs.',3))+
+        mfld('How will we measure design success?', ta('designbrief','success','e.g. 80% of participants complete a booking without assistance.',3))
+      );
+    case 'wireframes':
+      return mwhy('Review every wireframe by walking through your user scenarios step by step.')+mws(
+        mfld('What works?', ta('wireframes','good','What aspects of the wireframes serve the customer goal well?',3))+
+        mfld('Friction points or concerns', ta('wireframes','concerns','Where does the flow break down?',3))+
+        mfld('Questions for the design team', ta('wireframes','questions','Specific questions or requests for changes.',3))+
+        mfld('Engineering feasibility flags', ta('wireframes','engflags','Any controls flagged as expensive or problematic to build?',2))
+      );
+    case 'rams': {
+      var items2=['1. Innovative -- is the design fresh?','2. Useful -- does it make the product functional AND psychologically pleasing?','3. Aesthetic -- is the visual quality integral to the experience?','4. Understandable -- can the customer use it without instructions?','5. Unobtrusive -- does it stay out of the way?','6. Honest -- does it accurately represent what the product does?','7. Long-lasting -- will it age well as styles change?','8. Thorough -- has every interaction been thought through?','9. Eco-friendly -- is it resource efficient?','10. Minimal -- can any element be removed without losing meaning?'];
+      var html2='';
+      items2.forEach(function(item,i){html2+=mfld(item,ta('rams','p'+i,'Your notes...',2));});
+      return mwhy('These principles give you a framework for evaluating design.')+mws(html2);
+    }
+    case 'usabilitytesting':
+      return mwhy('Usability testing checks whether customers can complete key tasks. It does not test whether the product is valuable.')+mws(
+        mfld('Tasks given to testers', ta('usabilitytesting','tasks','1. Book campsite 4 for Friday to Sunday\n2. Cancel an existing reservation',4))+
+        mfld('Success rate per task', ta('usabilitytesting','results','Task 1: 4/5 completed without assistance...',4))+
+        mfld('Key friction points observed', ta('usabilitytesting','friction','Where did users get stuck, confused, or frustrated?',4))+
+        mfld('Design changes to make', ta('usabilitytesting','changes','What will you bring back to the design team?',3))
+      );
+    case 'designsprint':
+      return mwhy('A week-long collaborative process to solve a big design challenge and validate with real customers in 5 days.')+mdiag(DIAGRAMS.designsprint)+mws(
+        mfld('Sprint challenge', ta('designsprint','challenge','How might we make [workflow] so simple [persona] completes it in under 3 minutes?',3))+
+        mfld('Sprint team', ta('designsprint','team','List the participants and their roles.',2))+
+        mfld('Understand -- key insights', ta('designsprint','understand','Key insights from interviews and research...',3))+
+        mfld('Define -- focused problem', ta('designsprint','define','Design objective...',2))+
+        mfld('Diverge -- key ideas', ta('designsprint','diverge','Ideas from Crazy Eights and brainstorming...',3))+
+        mfld('Decide -- which idea won?', ta('designsprint','decide','Which concept did the team vote to prototype?',2))+
+        mfld('Prototype -- what was built?', ta('designsprint','prototype','Describe the prototype...',2))+
+        mfld('Test -- customer feedback', ta('designsprint','test','Summarize customer feedback. Did the design validate?',3))
+      );
+    case 'mvptypes':
+      return mwhy('Four simple MVP types for validating a new idea cheaply before committing to a full build.')+mws(
+        mfld('Which MVP type are you building and why?', ta('mvptypes','choice','e.g. Fake Door MVP -- adding a button to MyRec nav showing coming soon...',4))+
+        mfld('What will you measure to determine success?', ta('mvptypes','metric','e.g. If more than 15% of logged-in users click the button within 2 weeks, proceed.',3))
+      );
+    case 'backlog': {
+      var ev=[1,2,4,8,16];
+      return mwhy('Triage each CR as Bug, UX, Feature, or Design. Score by value over effort. Align with engineering on complexity.')+mws(
+        mfld('Top Priority CRs', ta('backlog','top5','1. Registration flow too many steps -- residents abandon (HIGH)\n2. ...',6))+
+        mfld('Icebox (not this cycle)', ta('backlog','icebox','Features to revisit later...',4))+
+        mfld('Backlog health notes', ta('backlog','health','Triage process, team alignment notes...',3))
+      );
+    }
+    case 'engbalance':
+      return mwhy('Monitor the time / quality / money triangle every sprint. When something slips, make an explicit decision -- do not let it drift.')+mdiag(DIAGRAMS.engbalance)+mws(
+        mfld('What is at risk this sprint?', ta('engbalance','risk','Time, quality, or scope?',2))+
+        mfld('What can be cut?', ta('engbalance','cuts','Features or scope to defer?',2))+
+        mfld('What is the non-negotiable?', ta('engbalance','fixed','What must ship on time and at quality?',2))+
+        mfld('Decision log', ta('engbalance','decisions','Record each trade-off decision and why.',4))
+      );
+    case 'userstories':
+      return mwhy('Format: As a [persona] I want [feature] so that [reason]. Acceptance criteria define done -- no ambiguity.')+mws(
+        mfld('User stories with acceptance criteria', ta('userstories','stories','As a resident I want [feature] so that [reason].\nAcceptance criteria:\n- ...',10))
+      );
+    default: {
+      var v=(getKey('note_'+taskId)||{}).notes||'';
+      return mwhy('Add your notes and findings for this step.')+mws(
+        '<textarea class="big-ta" rows="6" placeholder="Notes..." oninput="saveField(\'note_'+taskId+'\',\'notes\',this.value)">'+v+'</textarea>'
+      );
+    }
+  }
+}
+
+// -- DYNAMIC ROW RENDERERS --------------------------------------------------
+function renderRoadmapRows(){
+  var d=getKey('roadmap')||{rows:[]};
+  return (d.rows||[]).map(function(r,i){
+    var nm=(r.name||'').replace(/"/g,'&quot;');
+    var sn=r.bucket==='now'||!r.bucket?' selected':'';
+    var sx=r.bucket==='next'?' selected':'';
+    var sl=r.bucket==='later'?' selected':'';
+    return '<div class="roadmap-row"><input type="text" placeholder="Initiative or feature name" value="'+nm+'" oninput="updateRow(\'roadmap\',\'rows\','+i+',\'name\',this.value)"><select onchange="updateRow(\'roadmap\',\'rows\','+i+',\'bucket\',this.value)"><option value="now"'+sn+'>Now</option><option value="next"'+sx+'>Next</option><option value="later"'+sl+'>Later</option></select></div>';
+  }).join('');
+}
+function addRoadmapRow(){var d=getKey('roadmap')||{rows:[]};d.rows.push({name:'',bucket:'now'});setKey('roadmap',d);}
+
+function renderScoringRows(){
+  var d=getKey('scoring')||{rows:[]};
+  var ev=[1,2,4,8,16];
+  return (d.rows||[]).map(function(r,i){
+    var sc=r.cost>0?(r.value/r.cost).toFixed(2):'-';
+    var cls=parseFloat(sc)>=4?'high':parseFloat(sc)>=1?'med':'low';
+    var vopts=ev.map(function(v){return '<option value="'+v+'"'+(r.value===v?' selected':'')+'>'+v+' Value</option>';}).join('');
+    var copts=ev.map(function(v){return '<option value="'+v+'"'+(r.cost===v?' selected':'')+'>'+v+' Cost</option>';}).join('');
+    return '<div class="scoring-row"><input type="text" placeholder="Opportunity name" value="'+(r.name||'')+'" oninput="updateRow(\'scoring\',\'rows\','+i+',\'name\',this.value)"><select onchange="updateRow(\'scoring\',\'rows\','+i+',\'value\',parseInt(this.value))">'+vopts+'</select><select onchange="updateRow(\'scoring\',\'rows\','+i+',\'cost\',parseInt(this.value))">'+copts+'</select><span class="score-badge '+cls+'">'+sc+'</span></div>';
+  }).join('');
+}
+function addScoringRow(){var d=getKey('scoring')||{rows:[]};d.rows.push({name:'',value:4,cost:4});setKey('scoring',d);}
+
+function renderKanoRows(){
+  var d=getKey('kano')||{rows:[]};
+  return (d.rows||[]).map(function(r,i){
+    var sb=r.type==='basic'||!r.type?' selected':'';
+    var ss=r.type==='satisfier'?' selected':'';
+    var sd=r.type==='delighter'?' selected':'';
+    return '<div class="kano-row"><input type="text" placeholder="Feature name" value="'+(r.name||'')+'" oninput="updateRow(\'kano\',\'rows\','+i+',\'name\',this.value)"><input type="text" placeholder="Notes" value="'+(r.notes||'')+'" oninput="updateRow(\'kano\',\'rows\','+i+',\'notes\',this.value)"><select onchange="updateRow(\'kano\',\'rows\','+i+',\'type\',this.value)"><option value="basic"'+sb+'>Basic</option><option value="satisfier"'+ss+'>Satisfier</option><option value="delighter"'+sd+'>Delighter</option></select></div>';
+  }).join('');
+}
+function addKanoRow(){var d=getKey('kano')||{rows:[]};d.rows.push({name:'',notes:'',type:'basic'});setKey('kano',d);}
+
+function renderInterviewQs(){
+  var d=getKey('interviewqs')||{};
+  var qs=d.rows&&d.rows.length?d.rows:DEFAULT_QS.slice();
+  return qs.map(function(q,i){
+    return '<div class="q-row"><input type="text" value="'+q.replace(/"/g,'&quot;')+'" oninput="updateRow(\'interviewqs\',\'rows\','+i+',\'\',this.value,\'flat\')"><button class="del-btn" onclick="delRow(\'interviewqs\',\'rows\','+i+',\'q-list\',renderInterviewQs)">x</button></div>';
+  }).join('');
+}
+function addInterviewQ(){var d=getKey('interviewqs')||{};if(!d.rows||!d.rows.length)d.rows=DEFAULT_QS.slice();d.rows.push('');setKey('interviewqs',d);}
+
+function renderInterviewCards(){
+  var d=getKey('conclusions')||{interviews:[]};
+  return (d.interviews||[]).map(function(iv,i){
+    return '<div class="interview-card"><div class="interview-card-header"><div class="interview-card-title">Interview '+(i+1)+'</div><button class="del-btn" onclick="delRow(\'conclusions\',\'interviews\','+i+',\'interview-list\',renderInterviewCards)">Remove</button></div><input type="text" placeholder="Interviewee name / role" value="'+(iv.name||'')+'" oninput="updateRow(\'conclusions\',\'interviews\','+i+',\'name\',this.value)"><textarea placeholder="Key points..." oninput="updateRow(\'conclusions\',\'interviews\','+i+',\'notes\',this.value)">'+(iv.notes||'')+'</textarea><input type="text" placeholder="One-line verdict: validates / invalidates hypothesis?" value="'+(iv.verdict||'')+'" oninput="updateRow(\'conclusions\',\'interviews\','+i+',\'verdict\',this.value)"></div>';
+  }).join('');
+}
+function addInterview(){var d=getKey('conclusions')||{interviews:[]};d.interviews.push({name:'',notes:'',verdict:''});setKey('conclusions',d);}
+
+function updateRow(sk,arrKey,i,field,val,mode){
+  var d=getKey(sk)||{};
+  if(!d[arrKey])d[arrKey]=[];
+  if(mode==='flat'){d[arrKey][i]=val;}
+  else{if(!d[arrKey][i])d[arrKey][i]={};d[arrKey][i][field]=isNaN(val)?val:isNaN(parseFloat(val))?val:parseFloat(val);}
+  setKey(sk,d);
+}
+function delRow(sk,arrKey,i,elId,renderFn){
+  var d=getKey(sk)||{};
+  if(d[arrKey])d[arrKey].splice(i,1);
+  setKey(sk,d);refreshEl(elId,renderFn());
+}
+
+// -- GENERATE SLIDE DECK ----------------------------------------------------
+function generatePptx(){
+  var boxId='pptx-data-'+currentProjectId;
+  var box=document.getElementById(boxId);
+  if(!box){
+    // Create textarea and hint dynamically, same as JSX
+    var wrap=document.getElementById('pptx-box-wrap');
+    if(!wrap) return;
+    box=document.createElement('textarea');
+    box.id=boxId;
+    box.readOnly=true;
+    box.onclick=function(e){
+      e.target.select();
+      try{document.execCommand('copy');}catch(_e){}
+      e.target.style.background='#E8F4EE';
+      var t=e.target;
+      setTimeout(function(){t.style.background='#F7F5F0';},1000);
+    };
+    box.style.cssText='display:none;width:100%;height:72px;font-family:monospace;font-size:10px;background:#F7F5F0;border:1px solid #E4E0D8;border-radius:8px;padding:8px;resize:none;color:#555;box-sizing:border-box;cursor:pointer;';
+    var hint=document.createElement('div');
+    hint.id='pptx-hint-'+currentProjectId;
+    hint.style.cssText='display:none;font-size:11px;color:#9FD9C0;margin-top:4px;';
+    hint.textContent='Click the box to copy, then paste it to Claude';
+    wrap.innerHTML='';
+    wrap.appendChild(box);
+    wrap.appendChild(hint);
+  }
+  var proj=getProject(currentProjectId);
+  // Build task list from current phases
+  var phases = (proj.phaseSet==='myrec') ? buildMyRecPhases() : PHASES;
+  var taskList = [];
+  phases.forEach(function(ph){
+    var tasks = ph.sections ? ph.sections.reduce(function(a,s){return a.concat(s.tasks);}, []) : (ph.tasks||[]);
+    tasks.forEach(function(t){
+      taskList.push({id:t.id, title:t.title, modal:t.modal||'generic', ch:ph.ch, phase:ph.name});
+    });
+  });
+  var payload='GENERATE_SLIDE_DECK::'+proj.name+'::'+JSON.stringify({
+    data: proj.data||{},
+    tasks: taskList,
+    phaseSet: proj.phaseSet||'standard'
+  });
+  box.value=payload;
+  var show=box.style.display==='none';
+  box.style.display=show?'block':'none';
+  var hint2=document.getElementById('pptx-hint-'+currentProjectId);
+  if(hint2) hint2.style.display=show?'block':'none';
+  if(show){box.select();}
+}
+
+function seedAndRender(){
+  var app=loadApp();
+  var hasMyRec=Object.values(app.projects||{}).some(function(p){return p.phaseSet==='myrec';});
+  if(!hasMyRec){
+    var id='proj_myrec_'+Date.now();
+    app.projects[id]={id:id,name:'MyRec Public Side Enhancements',phaseSet:'myrec',
+      checks:{},data:Object.assign({},MYREC_SEED),created:Date.now(),updated:Date.now()};
+    saveApp(app);
+  }
+  renderHome();
+}
+
+function enterSignedInApp(){
+  sbFetchAllProjects().then(function(remote){
+    if(remote && Object.keys(remote.projects).length > 0){
+      var local = loadApp();
+      var merged = { projects: Object.assign({}, local.projects, remote.projects) };
+      _appCache = merged;
+      try{ lsSet('pm_playbook_v2', JSON.stringify(merged)); }catch(e){}
+    }
+    showPage('home');
+    seedAndRender();
+    updateCloudSyncUI(true);
+    var emailEl=document.getElementById('signed-in-email');
+    if(emailEl && _sb){
+      _sb.auth.getUser().then(function(r){
+        var u=r.data && r.data.user;
+        if(u && u.email) emailEl.textContent=u.email;
+      }).catch(function(){});
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  initSupabase().then(function(session){
+    if(!_sb){
+      // No Supabase SDK available at all -- skip login, work fully offline.
+      showPage('home'); seedAndRender(); updateCloudSyncUI(false); return;
+    }
+    if(session){
+      enterSignedInApp();
+    } else {
+      // Not signed in yet -- show the login page and wait.
+      showPage('login');
+      // Listen for the moment a magic-link redirect completes sign-in.
+      _sb.auth.onAuthStateChange(function(event, sess){
+        if(sess && (event==='SIGNED_IN' || event==='INITIAL_SESSION')){
+          _sbReady = true;
+          enterSignedInApp();
+        }
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>
