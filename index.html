@@ -1716,6 +1716,49 @@ function createMyRecProject(){
   openProject(id);
 }
 
+function repairPhaseOrder(proj){
+  // One-time repair for projects whose customPhases array was built or
+  // modified before the ordering fix existed -- re-sorts existing stored
+  // data by real playbook position instead of relying on insertion order.
+  if(proj.phaseSet !== 'custom' || !proj.customPhases || !proj.customPhases.length) return false;
+  var phaseOrder = {}; PHASES.forEach(function(p, i){ phaseOrder[p.id] = i; });
+  var lib = getStepLibrary();
+  var libOrder = {}; lib.forEach(function(s, i){ libOrder[s.id] = i; });
+
+  function origPhaseId(ph){
+    return ph.id.indexOf('extra_') === 0 ? ph.id.slice(6) : (ph.id.indexOf('ai_') === 0 ? ph.id.slice(3) : ph.id);
+  }
+
+  var before = proj.customPhases.map(function(p){ return p.id; }).join(',');
+
+  var sorted = proj.customPhases.slice().sort(function(a, b){
+    return (phaseOrder[origPhaseId(a)] || 0) - (phaseOrder[origPhaseId(b)] || 0);
+  });
+  sorted.forEach(function(ph){
+    if(ph.tasks && ph.tasks.length > 1){
+      ph.tasks = ph.tasks.slice().sort(function(a, b){
+        return (libOrder[a.id] || 0) - (libOrder[b.id] || 0);
+      });
+    }
+  });
+
+  var after = sorted.map(function(p){ return p.id; }).join(',');
+  if(before === after) return false;
+
+  proj.customPhases = sorted;
+  return true;
+}
+
+function repairAllProjectsPhaseOrder(){
+  var app = loadApp();
+  var fixedCount = 0;
+  Object.values(app.projects || {}).forEach(function(proj){
+    if(repairPhaseOrder(proj)) fixedCount++;
+  });
+  if(fixedCount > 0) saveApp(app);
+  return fixedCount;
+}
+
 function getProjectPhases(proj){
   var base;
   if(proj.phaseSet === 'myrec') base = buildMyRecPhases();
@@ -1734,21 +1777,40 @@ function getProjectPhases(proj){
     var toAdd = proj.extraSteps.filter(function(id){ return !have.has(id); });
     if(toAdd.length){
       base = base.slice(); // don't mutate the shared array (e.g. PHASES itself)
+      // Real playbook order, used to insert both new phases and new tasks
+      // within a phase at the correct position -- never just appended.
+      var lib = getStepLibrary();
+      var libOrder = {}; lib.forEach(function(s, i){ libOrder[s.id] = i; });
+      var phaseOrder = {}; PHASES.forEach(function(p, i){ phaseOrder[p.id] = i; });
+
       toAdd.forEach(function(id){
         var step = findStepById(id);
         if(!step) return;
-        var existing = base.find(function(ph){ return ph.name === step.phaseName; });
+        var existingIdx = base.findIndex(function(ph){ return ph.name === step.phaseName; });
         var taskObj = { id: step.id, title: step.title, desc: step.desc, modal: step.modal };
-        if(existing){
-          existing.tasks = (existing.tasks || []).concat([taskObj]);
+
+        if(existingIdx >= 0){
+          var existing = base[existingIdx];
+          var tasks = (existing.tasks || []).slice();
+          var insertAt = tasks.findIndex(function(t){ return (libOrder[t.id] || 0) > (libOrder[step.id] || 0); });
+          if(insertAt < 0) tasks.push(taskObj); else tasks.splice(insertAt, 0, taskObj);
+          base[existingIdx] = Object.assign({}, existing, { tasks: tasks });
         } else {
           var origPhase = PHASES.find(function(p){ return p.id === step.phaseId; });
-          base.push({
+          var newPhase = {
             id: 'extra_' + step.phaseId, label: origPhase ? origPhase.label : step.phaseName,
             ch: step.chapter, name: step.phaseName,
             bg: origPhase ? origPhase.bg : '#F0F0F0', tc: origPhase ? origPhase.tc : '#555566',
             tasks: [taskObj]
+          };
+          // Insert the new phase at the position matching its real chapter
+          // order, not always at the end of the list.
+          var newPhaseOrder = phaseOrder[step.phaseId] || 0;
+          var insertPhaseAt = base.findIndex(function(ph){
+            var origId = ph.id.indexOf('extra_') === 0 ? ph.id.slice(6) : (ph.id.indexOf('ai_') === 0 ? ph.id.slice(3) : ph.id);
+            return (phaseOrder[origId] || 0) > newPhaseOrder;
           });
+          if(insertPhaseAt < 0) base.push(newPhase); else base.splice(insertPhaseAt, 0, newPhase);
         }
       });
     }
@@ -2516,6 +2578,11 @@ function enterSignedInApp(){
       _appCache = merged;
       try{ lsSet('pm_playbook_v2', JSON.stringify(merged)); }catch(e){}
     }
+    // One-time silent repair for any project whose phase/task order was
+    // corrupted by the earlier append-only bug, fixed going forward but
+    // not retroactively for data saved before the fix existed.
+    var fixedCount = repairAllProjectsPhaseOrder();
+    if(fixedCount > 0) console.log('Repaired step order in ' + fixedCount + ' project(s).');
     showPage('home');
     seedAndRender();
     updateCloudSyncUI(true);
