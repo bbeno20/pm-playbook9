@@ -912,11 +912,17 @@ const MODAL_FIELD_SCHEMA = {
 };
 
 // -- ASK AI --------------------------------------------------------------------
+function apiKeyStorageKey(){
+  // Keyed to the signed-in email so a different person signing in on the
+  // same browser never sees or overwrites someone else's saved key.
+  // Falls back to a generic offline slot only when nobody is signed in.
+  return currentUserEmail ? ('pm_anthropic_key_' + currentUserEmail.toLowerCase()) : 'pm_anthropic_key_offline';
+}
 function getApiKey(){
-  try{ return localStorage.getItem('pm_anthropic_key') || ''; }catch(e){ return ''; }
+  try{ return localStorage.getItem(apiKeyStorageKey()) || ''; }catch(e){ return ''; }
 }
 function setApiKey(k){
-  try{ localStorage.setItem('pm_anthropic_key', k); }catch(e){}
+  try{ localStorage.setItem(apiKeyStorageKey(), k); }catch(e){}
 }
 
 function toggleAiSettingsBox(){
@@ -929,7 +935,8 @@ function toggleAiSettingsBox(){
     var existing = getApiKey();
     if(input){ input.value = existing; }
     var statusEl = document.getElementById('ai-key-status');
-    if(statusEl){ statusEl.textContent = existing ? 'A key is currently saved.' : 'No key saved yet.'; }
+    var whoText = currentUserEmail ? ('for ' + currentUserEmail) : '(not signed in -- this key only applies on this device)';
+    if(statusEl){ statusEl.textContent = (existing ? 'A key is currently saved ' : 'No key saved yet ') + whoText; }
   }
 }
 
@@ -1423,6 +1430,7 @@ var _sb = null;
 var _sbReady = false;
 var _appCache = null;
 var _saveDebounceSb = null;
+var currentUserEmail = null;
 
 function initSupabase(){
   return new Promise(function(resolve){
@@ -2424,7 +2432,17 @@ function seedAndRender(){
 }
 
 function enterSignedInApp(){
-  sbFetchAllProjects().then(function(remote){
+  // Resolve the signed-in email FIRST, before showing the home page, so the
+  // API key (which is keyed to this email) is never read/written against
+  // the wrong slot during the brief window before the email is known.
+  var getEmail = _sb ? _sb.auth.getUser().then(function(r){
+    var u = r.data && r.data.user;
+    if(u && u.email) currentUserEmail = u.email;
+  }).catch(function(){}) : Promise.resolve();
+
+  getEmail.then(function(){
+    return sbFetchAllProjects();
+  }).then(function(remote){
     if(remote && Object.keys(remote.projects).length > 0){
       var local = loadApp();
       var merged = { projects: Object.assign({}, local.projects, remote.projects) };
@@ -2435,12 +2453,7 @@ function enterSignedInApp(){
     seedAndRender();
     updateCloudSyncUI(true);
     var emailEl=document.getElementById('signed-in-email');
-    if(emailEl && _sb){
-      _sb.auth.getUser().then(function(r){
-        var u=r.data && r.data.user;
-        if(u && u.email) emailEl.textContent=u.email;
-      }).catch(function(){});
-    }
+    if(emailEl && currentUserEmail) emailEl.textContent = currentUserEmail;
   });
 }
 
