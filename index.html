@@ -345,7 +345,7 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
     <div style="margin-bottom:1rem;">
       <button class="btn-ghost" onclick="toggleProjectAiChat()" style="width:100%;justify-content:center;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9l-7 3 7 3 3 7 3-7 7-3-7-3z"/></svg>
-        Ask AI about this project
+        <span id="project-ai-toggle-label">Ask AI about this project</span>
       </button>
       <div id="project-ai-chat" style="display:none;border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-top:8px;background:var(--surface);">
         <div id="project-ai-thread" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px;max-height:40vh;overflow-y:auto;"></div>
@@ -1154,20 +1154,30 @@ function sendAiScopingMessage(){
 
 function renderAiScopeProposal(parsed){
   var validIds = parsed.stepIds.filter(function(id){ return !!findStepById(id); });
+
+  // Sort by real playbook order, not the AI's array order, so both the
+  // chapter grouping and the steps within each chapter come out in the
+  // same sequence the rest of the app uses everywhere else.
+  var lib = getStepLibrary();
+  var libOrder = {};
+  lib.forEach(function(s, i){ libOrder[s.id] = i; });
+  validIds = validIds.slice().sort(function(a, b){ return libOrder[a] - libOrder[b]; });
+
   aiScopeProposedSteps = validIds;
 
   addAiScopeBubble('assistant', parsed.summary + '\n\nProposed ' + validIds.length + ' steps -- review the exact list below before creating the project.');
 
   var steps = validIds.map(findStepById);
   var byChapter = {};
+  var chapterOrder = [];
   steps.forEach(function(s){
-    if(!byChapter[s.chapter]) byChapter[s.chapter] = [];
+    if(!byChapter[s.chapter]){ byChapter[s.chapter] = []; chapterOrder.push(s.chapter); }
     byChapter[s.chapter].push(s);
   });
 
   var html = '<div style="border:1px solid var(--border);border-radius:11px;padding:14px 16px;background:var(--bg);margin-bottom:12px;">';
   html += '<div style="font-weight:600;font-size:13px;margin-bottom:10px;">Proposed steps (' + validIds.length + ')</div>';
-  Object.keys(byChapter).forEach(function(ch){
+  chapterOrder.forEach(function(ch){
     html += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 4px;">' + ch + '</div>';
     byChapter[ch].forEach(function(s){
       html += '<div style="font-size:13px;padding:3px 0;">' + s.title + '</div>';
@@ -1209,6 +1219,10 @@ function approveAiScopeProposal(){
     checks: {}, data: {}, created: Date.now(), updated: Date.now()
   };
   saveApp(app);
+  // Carry the original scoping conversation into this project's own AI chat,
+  // so the reasoning behind the initial step selection is not lost the
+  // moment the project is created.
+  projectAiHistory[id] = aiScopeHistory.slice();
   openProject(id);
 }
 
@@ -1229,13 +1243,56 @@ function toggleProjectAiChat(){
 
 function addProjectAiBubble(role, text){
   var thread = document.getElementById('project-ai-thread');
+  var bubble = makeChatBubble(role, text);
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function makeChatBubble(role, text){
   var bubble = document.createElement('div');
   var isUser = role === 'user';
   bubble.style.cssText = 'max-width:90%;padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;' +
     (isUser ? 'align-self:flex-end;background:var(--accent);color:#fff;' : 'align-self:flex-start;background:var(--bg);color:var(--text);border:1px solid var(--border);');
   bubble.textContent = text;
-  thread.appendChild(bubble);
-  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+function resetProjectAiPanelForCurrentProject(){
+  // Always hide the panel and clear the visible thread when switching
+  // projects -- the data in projectAiHistory stays correctly separated per
+  // project id, but the DOM thread element is shared and must be rebuilt
+  // from THIS project's history every time a project is opened.
+  var box = document.getElementById('project-ai-chat');
+  var thread = document.getElementById('project-ai-thread');
+  var proposal = document.getElementById('project-ai-proposal');
+  var label = document.getElementById('project-ai-toggle-label');
+  if(box) box.style.display = 'none';
+  if(proposal){ proposal.style.display = 'none'; proposal.innerHTML = ''; }
+  projectAiProposedSteps = null;
+  if(!thread) return;
+  thread.innerHTML = '';
+  var history = projectAiHistory[currentProjectId];
+  if(history && history.length){
+    history.forEach(function(turn){
+      // The raw assistant turns stored in history are JSON payloads
+      // ({"type":"question",...} or {"type":"proposal",...}) -- show their
+      // human-readable text instead of dumping literal JSON into the thread.
+      var displayText = turn.content;
+      if(turn.role === 'assistant'){
+        var cleaned = turn.content.replace(/```json|```/g, '').trim();
+        try{
+          var parsed = JSON.parse(cleaned);
+          if(parsed.type === 'question'){ displayText = parsed.text; }
+          else if(parsed.type === 'proposal'){ displayText = (parsed.summary || parsed.reason || 'Proposed additional steps.') + ' (step proposal shown earlier in this conversation)'; }
+        }catch(e){ /* not JSON -- show as-is */ }
+      }
+      thread.appendChild(makeChatBubble(turn.role, displayText));
+    });
+    thread.scrollTop = thread.scrollHeight;
+    if(label) label.textContent = 'Ask AI about this project (' + history.length + ' message' + (history.length===1?'':'s') + ')';
+  } else {
+    if(label) label.textContent = 'Ask AI about this project';
+  }
 }
 
 function buildProjectContextSummary(proj){
@@ -1331,6 +1388,15 @@ function renderProjectAiProposal(parsed){
     addProjectAiBubble('assistant', parsed.reason || 'No valid steps to propose.');
     return;
   }
+
+  // Sort by the step's real position in the playbook, not whatever order
+  // the AI happened to list the ids in -- the AI's JSON array order is not
+  // guaranteed to match chapter/phase sequence.
+  var lib = getStepLibrary();
+  var libOrder = {};
+  lib.forEach(function(s, i){ libOrder[s.id] = i; });
+  validIds = validIds.slice().sort(function(a, b){ return libOrder[a] - libOrder[b]; });
+
   projectAiProposedSteps = validIds;
 
   addProjectAiBubble('assistant', parsed.reason + '\n\nProposing ' + validIds.length + ' additional step(s) -- review below.');
@@ -1702,6 +1768,7 @@ function openProject(id){
     buildPhasesUI();
     loadChecks();
     updateProgress();
+    resetProjectAiPanelForCurrentProject();
     showPage('project');
   } catch(e) {
     alert('openProject error: '+e.message+' at '+e.stack);
