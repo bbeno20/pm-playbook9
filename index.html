@@ -28,6 +28,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .project-split{display:block;}
 .project-split-phases{width:100%;}
 .project-split-preview{display:none;}
+.mobile-preview-btn{display:inline-flex;}
+.mobile-preview-overlay{
+  display:none;position:fixed;inset:0;background:rgba(20,20,20,.6);
+  z-index:200;align-items:center;justify-content:center;padding:1rem;
+}
+.mobile-preview-overlay.open{display:flex;}
+.mobile-preview-card{
+  background:var(--surface);border-radius:14px;width:100%;max-width:680px;
+  max-height:92vh;overflow-y:auto;padding:18px;position:relative;
+}
+.mobile-preview-close{
+  position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);
+  cursor:pointer;padding:6px;line-height:0;
+}
+@media (min-width:1180px){
+  .mobile-preview-btn{display:none;}
+}
 @media (min-width:1180px){
   .project-split{
     display:flex;gap:32px;align-items:flex-start;
@@ -376,6 +393,10 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           View Slide Deck
         </button>
+        <button class="btn-sm mobile-preview-btn" onclick="openMobilePreview()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview Slide Deck
+        </button>
       </div>
       <div id="pptx-box-wrap" style="margin:6px 0 0;padding:0;"></div>
 
@@ -467,6 +488,21 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
 </div>
 
 <!-- Modal -->
+<div class="mobile-preview-overlay" id="mobile-preview-overlay" onclick="if(event.target===this)closeMobilePreview()">
+  <div class="mobile-preview-card">
+    <button class="mobile-preview-close" onclick="closeMobilePreview()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-right:30px;">
+      <div class="preview-title" style="margin-bottom:0;">Slide preview</div>
+      <div id="mobile-slide-preview-nav" style="display:flex;align-items:center;"></div>
+    </div>
+    <div id="mobile-slide-preview-content" style="margin-top:10px;">
+      <div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-panel" id="modal-panel" onclick="if(event.target===this)closeModal()">
     <div class="modal-card">
       <div class="modal-header">
@@ -2487,27 +2523,37 @@ function buildPreviewSlideList(){
   return slides;
 }
 
+function writePreviewContentToAllTargets(html){
+  var ids = ['slide-preview-content', 'mobile-slide-preview-content'];
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.innerHTML = html;
+  });
+}
+
 function renderPreviewNav(){
-  var navEl = document.getElementById('slide-preview-nav');
-  if(!navEl) return;
-  if(previewSlideList.length <= 1){ navEl.innerHTML = ''; return; }
-  navEl.innerHTML =
-    '<button onclick="goToPreviewSlide(-1)" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px;" title="Previous slide">&larr;</button>' +
-    '<span style="font-size:11px;color:var(--faint);margin:0 8px;">' + (previewSlideIndex+1) + ' / ' + previewSlideList.length + '</span>' +
-    '<button onclick="goToPreviewSlide(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px;" title="Next slide">&rarr;</button>';
+  var navHTML = '';
+  if(previewSlideList.length > 1){
+    navHTML =
+      '<button onclick="goToPreviewSlide(-1)" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px;" title="Previous slide">&larr;</button>' +
+      '<span style="font-size:11px;color:var(--faint);margin:0 8px;">' + (previewSlideIndex+1) + ' / ' + previewSlideList.length + '</span>' +
+      '<button onclick="goToPreviewSlide(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:13px;" title="Next slide">&rarr;</button>';
+  }
+  ['slide-preview-nav', 'mobile-slide-preview-nav'].forEach(function(id){
+    var navEl = document.getElementById(id);
+    if(navEl) navEl.innerHTML = navHTML;
+  });
 }
 
 function goToPreviewSlide(delta){
   if(!previewSlideList.length) return;
   previewSlideIndex = (previewSlideIndex + delta + previewSlideList.length) % previewSlideList.length;
-  var container = document.getElementById('slide-preview-content');
-  if(container) container.innerHTML = previewSlideList[previewSlideIndex].html;
+  writePreviewContentToAllTargets(previewSlideList[previewSlideIndex].html);
   renderPreviewNav();
 }
 
 function refreshSlidePreview(){
-  var container = document.getElementById('slide-preview-content');
-  if(!container || !currentModalTask) return;
+  if(!currentModalTask) return;
 
   previewSlideList = buildPreviewSlideList();
 
@@ -2523,12 +2569,12 @@ function refreshSlidePreview(){
 
   if(matchIdx >= 0){
     previewSlideIndex = matchIdx;
-    container.innerHTML = previewSlideList[matchIdx].html;
+    writePreviewContentToAllTargets(previewSlideList[matchIdx].html);
   } else if(previewSlideList.length){
     previewSlideIndex = 0;
-    container.innerHTML = previewSlideList[0].html;
+    writePreviewContentToAllTargets(previewSlideList[0].html);
   } else {
-    container.innerHTML = '<div class="preview-slide"><div class="preview-slide-empty">Fill in this step to see a slide preview here.</div></div>';
+    writePreviewContentToAllTargets('<div class="preview-slide"><div class="preview-slide-empty">Fill in this step to see a slide preview here.</div></div>');
   }
   renderPreviewNav();
 }
@@ -2538,13 +2584,40 @@ function refreshSlidePreviewInPlace(){
   // screen, without requiring a modal to be open -- used when something
   // project-level changes (like the project name on the cover slide) while
   // the preview panel may already be showing a slide from a prior session.
-  var container = document.getElementById('slide-preview-content');
-  if(!container) return;
   previewSlideList = buildPreviewSlideList();
   if(!previewSlideList.length){ return; }
   if(previewSlideIndex >= previewSlideList.length) previewSlideIndex = 0;
-  container.innerHTML = previewSlideList[previewSlideIndex].html;
+  writePreviewContentToAllTargets(previewSlideList[previewSlideIndex].html);
   renderPreviewNav();
+}
+
+function openMobilePreview(){
+  var overlay = document.getElementById('mobile-preview-overlay');
+  if(!overlay) return;
+  // Build/refresh the slide list independent of any open modal, so the
+  // mobile preview works even when launched directly from the project
+  // header rather than from inside a step.
+  previewSlideList = buildPreviewSlideList();
+  if(previewSlideIndex >= previewSlideList.length) previewSlideIndex = 0;
+  if(previewSlideList.length){
+    writePreviewContentToAllTargets(previewSlideList[previewSlideIndex].html);
+  } else {
+    writePreviewContentToAllTargets('<div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>');
+  }
+  renderPreviewNav();
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMobilePreview(){
+  var overlay = document.getElementById('mobile-preview-overlay');
+  if(overlay) overlay.classList.remove('open');
+  // Only release the scroll lock if the step modal isn't also open --
+  // both overlays share the same body-scroll-lock convention.
+  var modalPanel = document.getElementById('modal-panel');
+  if(!modalPanel || !modalPanel.classList.contains('open')){
+    document.body.style.overflow = '';
+  }
 }
 
 // Event delegation: 'blur' does not bubble, 'focusout' does -- this single
@@ -3029,8 +3102,11 @@ function openProject(id){
     var searchInput=document.getElementById('project-search-input'); if(searchInput) searchInput.value='';
     var searchResults=document.getElementById('project-search-results'); if(searchResults){ searchResults.style.display='none'; searchResults.innerHTML=''; }
     currentModalTask = null;
-    var previewEl=document.getElementById('slide-preview-content');
-    if(previewEl) previewEl.innerHTML='<div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>';
+    previewSlideList = [];
+    previewSlideIndex = 0;
+    writePreviewContentToAllTargets('<div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>');
+    renderPreviewNav();
+    closeMobilePreview();
     var sourcesPanelEl=document.getElementById('sources-panel'); if(sourcesPanelEl) sourcesPanelEl.style.display='none';
     var sourcesStatusEl=document.getElementById('sources-status'); if(sourcesStatusEl) sourcesStatusEl.textContent='';
     var staleSynthPreview=document.getElementById('project-synth-preview'); if(staleSynthPreview) staleSynthPreview.remove();
@@ -3342,7 +3418,10 @@ function openModal(taskId,modalKey){
 function closeModal(){
   var panel=document.getElementById('modal-panel');
   if(panel) panel.classList.remove('open');
-  document.body.style.overflow='';
+  var mobilePreviewOverlay = document.getElementById('mobile-preview-overlay');
+  if(!mobilePreviewOverlay || !mobilePreviewOverlay.classList.contains('open')){
+    document.body.style.overflow='';
+  }
 }
 
 function handleOverlayClick(e){}
