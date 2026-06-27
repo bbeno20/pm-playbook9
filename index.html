@@ -1883,6 +1883,7 @@ function sbFetchAllProjects(){
       projects[row.id] = {
         id: row.id, name: row.name || '', phaseSet: row.phase_set || 'standard',
         checks: row.checks || {}, data: row.data || {},
+        extraSteps: row.extra_steps || [], customPhases: row.custom_phases || null,
         created: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
         updated: row.updated_at ? new Date(row.updated_at).getTime() : Date.now()
       };
@@ -1895,7 +1896,8 @@ function sbUpsertProject(proj){
   if(!_sbReady) return;
   _sb.from('pm_projects').upsert({
     id: proj.id, name: proj.name || '', phase_set: proj.phaseSet || 'standard',
-    checks: proj.checks || {}, data: proj.data || {}
+    checks: proj.checks || {}, data: proj.data || {},
+    extra_steps: proj.extraSteps || [], custom_phases: proj.customPhases || null
   }).then(function(res){
     if(res.error) console.warn('Supabase save failed:', res.error.message);
   }).catch(function(e){ console.warn('Supabase save error:', e); });
@@ -2130,7 +2132,7 @@ function getProjectPhases(proj){
           // order, not always at the end of the list.
           var newPhaseOrder = phaseOrder[step.phaseId] || 0;
           var insertPhaseAt = base.findIndex(function(ph){
-            var origId = ph.id.indexOf('extra_') === 0 ? ph.id.slice(6) : (ph.id.indexOf('ai_') === 0 ? ph.id.slice(3) : ph.id);
+            var origId = ph.id.indexOf('extra_') === 0 ? ph.id.slice(6) : (ph.id.indexOf('ai_') === 0 ? ph.id.slice(3) : (ph.id.indexOf('mrp') === 0 ? 'p' + ph.id.slice(3) : ph.id));
             return (phaseOrder[origId] || 0) > newPhaseOrder;
           });
           if(insertPhaseAt < 0) base.push(newPhase); else base.splice(insertPhaseAt, 0, newPhase);
