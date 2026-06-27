@@ -36,12 +36,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .mobile-preview-overlay.open{display:flex;}
 .mobile-preview-card{
   background:var(--surface);border-radius:14px;width:100%;max-width:680px;
-  max-height:92vh;overflow-y:auto;padding:18px;position:relative;
+  height:min(86vh,560px);overflow:hidden;padding:18px;position:relative;
+  display:flex;flex-direction:column;
 }
 .mobile-preview-close{
   position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);
-  cursor:pointer;padding:6px;line-height:0;
+  cursor:pointer;padding:6px;line-height:0;z-index:2;
 }
+.mobile-preview-slide-area{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  overflow-y:auto;touch-action:pan-y;
+}
+.mobile-preview-nav-corner{
+  position:absolute;bottom:14px;right:14px;display:flex;align-items:center;gap:4px;
+  background:var(--surface);border-radius:20px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.present-mode-overlay{
+  display:none;position:fixed;inset:0;background:#000;z-index:300;
+  align-items:center;justify-content:center;flex-direction:column;
+}
+.present-mode-overlay.open{display:flex;}
+.present-mode-slide-wrap{
+  width:min(92vw,1100px);aspect-ratio:16/9;background:#fff;border-radius:6px;
+  overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.4);position:relative;
+}
+.present-mode-slide-wrap .preview-slide{
+  width:333.33%;height:333.33%;aspect-ratio:unset;margin-bottom:0;box-shadow:none;border:none;
+  transform:scale(.3);transform-origin:top left;
+}
+.present-mode-close{
+  position:absolute;top:18px;right:18px;background:rgba(255,255,255,.12);border:none;color:#fff;
+  border-radius:8px;cursor:pointer;padding:8px;line-height:0;z-index:2;
+}
+.present-mode-nav{
+  position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);
+  border-radius:24px;padding:6px 14px;color:#fff;font-size:13px;
+}
+.present-mode-nav button{background:none;border:none;color:#fff;cursor:pointer;padding:4px;display:flex;}
 @media (min-width:1180px){
   .mobile-preview-btn{display:none;}
 }
@@ -397,7 +429,7 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
         </button>
         <button class="btn-sm mobile-preview-btn" onclick="openMobilePreview()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-          Preview Slide Deck
+          Preview Project
         </button>
       </div>
       <div id="pptx-box-wrap" style="margin:6px 0 0;padding:0;"></div>
@@ -476,7 +508,14 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
       <div class="project-split-preview" id="project-split-preview">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="preview-title" style="margin-bottom:0;">Slide preview</div>
-          <div id="slide-preview-nav" style="display:flex;align-items:center;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button onclick="openPresentMode()" title="Present this slide deck fullscreen"
+              style="display:flex;align-items:center;gap:5px;background:none;border:1px solid var(--border-strong);border-radius:7px;padding:5px 9px;font-size:11px;color:var(--text);cursor:pointer;font-family:inherit;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              Present
+            </button>
+            <div id="slide-preview-nav" style="display:flex;align-items:center;"></div>
+          </div>
         </div>
         <div id="slide-preview-content" style="margin-top:8px;">
           <div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>
@@ -495,13 +534,31 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
     <button class="mobile-preview-close" onclick="closeMobilePreview()">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding-right:30px;">
-      <div class="preview-title" style="margin-bottom:0;">Slide preview</div>
-      <div id="mobile-slide-preview-nav" style="display:flex;align-items:center;"></div>
+    <div class="preview-title" style="margin-bottom:0;padding-right:30px;">Slide preview</div>
+    <div class="mobile-preview-slide-area" id="mobile-preview-slide-area">
+      <div id="mobile-slide-preview-content" style="width:100%;">
+        <div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>
+      </div>
     </div>
-    <div id="mobile-slide-preview-content" style="margin-top:10px;">
-      <div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>
-    </div>
+    <div class="mobile-preview-nav-corner" id="mobile-slide-preview-nav"></div>
+  </div>
+</div>
+
+<div class="present-mode-overlay" id="present-mode-overlay" onclick="if(event.target===this)closePresentMode()">
+  <button class="present-mode-close" onclick="closePresentMode()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <div class="present-mode-slide-wrap" id="present-mode-slide-wrap">
+    <div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>
+  </div>
+  <div class="present-mode-nav">
+    <button onclick="goToPreviewSlide(-1)" title="Previous slide">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span id="present-mode-counter"></span>
+    <button onclick="goToPreviewSlide(1)" title="Next slide">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
   </div>
 </div>
 
@@ -2563,6 +2620,7 @@ function goToPreviewSlide(delta){
   previewSlideIndex = (previewSlideIndex + delta + previewSlideList.length) % previewSlideList.length;
   writePreviewContentToAllTargets(previewSlideList[previewSlideIndex].html);
   renderPreviewNav();
+  syncPresentModeSlide();
 }
 
 function refreshSlidePreview(){
@@ -2632,6 +2690,82 @@ function closeMobilePreview(){
     document.body.style.overflow = '';
   }
 }
+
+// Swipe support for the mobile preview popup. Attached once at script load
+// (not re-attached on every open) to avoid stacking duplicate listeners.
+// A minimum horizontal distance and a max vertical drift guard against
+// accidental triggers from normal vertical scrolling inside a tall slide.
+(function setUpMobilePreviewSwipe(){
+  var startX = null, startY = null;
+  var SWIPE_MIN_DISTANCE = 50;
+  var SWIPE_MAX_VERTICAL_DRIFT = 60;
+
+  document.addEventListener('touchstart', function(e){
+    var area = document.getElementById('mobile-preview-slide-area');
+    if(!area || !area.contains(e.target)) return;
+    if(e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e){
+    if(startX === null) return;
+    var overlay = document.getElementById('mobile-preview-overlay');
+    if(!overlay || !overlay.classList.contains('open')){ startX = null; return; }
+    var endX = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || startX;
+    var endY = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) || startY;
+    var dx = endX - startX, dy = endY - startY;
+    startX = null; startY = null;
+    if(Math.abs(dy) > SWIPE_MAX_VERTICAL_DRIFT) return; // looks like a scroll, not a swipe
+    if(Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+    goToPreviewSlide(dx < 0 ? 1 : -1); // swipe left -> next, swipe right -> previous
+  }, { passive: true });
+})();
+
+function syncPresentModeSlide(){
+  var overlay = document.getElementById('present-mode-overlay');
+  if(!overlay || !overlay.classList.contains('open')) return;
+  var wrap = document.getElementById('present-mode-slide-wrap');
+  var counter = document.getElementById('present-mode-counter');
+  if(wrap){
+    wrap.innerHTML = previewSlideList.length
+      ? previewSlideList[previewSlideIndex].html
+      : '<div class="preview-slide"><div class="preview-slide-empty">Fill in a step to see a slide preview here.</div></div>';
+  }
+  if(counter) counter.textContent = previewSlideList.length ? (previewSlideIndex+1) + ' / ' + previewSlideList.length : '';
+}
+
+function openPresentMode(){
+  var overlay = document.getElementById('present-mode-overlay');
+  if(!overlay) return;
+  // Build/refresh independent of any open modal, same as the mobile preview,
+  // so Present works whether or not a step's modal happens to be open.
+  previewSlideList = buildPreviewSlideList();
+  if(previewSlideIndex >= previewSlideList.length) previewSlideIndex = 0;
+  overlay.classList.add('open');
+  syncPresentModeSlide();
+  document.body.style.overflow = 'hidden';
+}
+
+function closePresentMode(){
+  var overlay = document.getElementById('present-mode-overlay');
+  if(overlay) overlay.classList.remove('open');
+  var modalPanel = document.getElementById('modal-panel');
+  var mobilePreviewOverlay = document.getElementById('mobile-preview-overlay');
+  var modalOpen = modalPanel && modalPanel.classList.contains('open');
+  var mobilePreviewOpen = mobilePreviewOverlay && mobilePreviewOverlay.classList.contains('open');
+  if(!modalOpen && !mobilePreviewOpen){
+    document.body.style.overflow = '';
+  }
+}
+
+document.addEventListener('keydown', function(e){
+  var overlay = document.getElementById('present-mode-overlay');
+  if(!overlay || !overlay.classList.contains('open')) return;
+  if(e.key === 'Escape'){ closePresentMode(); return; }
+  if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); goToPreviewSlide(-1); return; }
+  if(e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' '){ e.preventDefault(); goToPreviewSlide(1); return; }
+});
 
 // Event delegation: 'blur' does not bubble, 'focusout' does -- this single
 // listener catches every field inside any modal without needing to touch
