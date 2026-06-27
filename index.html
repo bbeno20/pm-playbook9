@@ -2738,10 +2738,24 @@ function continueOffline(){
 }
 
 function signOut(){
-  if(_sb){ _sb.auth.signOut().catch(function(){}); }
-  _appCache=null; _sbReady=false;
+  _appCache=null;
   try{ lsSet('pm_playbook_v2', JSON.stringify({projects:{}})); }catch(e){}
-  location.reload();
+  if(_sb){
+    _sb.auth.signOut().then(function(){
+      _sbReady=false;
+      location.reload();
+    }).catch(function(){
+      // Even if Supabase's sign-out call itself failed (e.g. network
+      // issue), still reload -- the local state above is already cleared,
+      // and getSession() on reload will re-validate whatever token (if
+      // any) is actually left, rather than this code guessing.
+      _sbReady=false;
+      location.reload();
+    });
+  } else {
+    _sbReady=false;
+    location.reload();
+  }
 }
 
 function sbFetchAllProjects(){
@@ -2778,8 +2792,8 @@ function sbUpsertProject(proj){
 }
 
 function sbDeleteProject(id){
-  if(!_sbReady) return;
-  _sb.from('pm_projects').delete().eq('id', id).then(function(res){
+  if(!_sbReady) return Promise.resolve();
+  return _sb.from('pm_projects').delete().eq('id', id).then(function(res){
     if(res.error) console.warn('Supabase delete failed:', res.error.message);
   }).catch(function(){});
 }
@@ -3135,10 +3149,12 @@ function deleteCurrentProject(){
   var proj=getProject(currentProjectId);
   if(!confirm('Delete "'+( proj.name||'Untitled')+'\"? Cannot be undone.')) return;
   var app=loadApp();
-  delete app.projects[currentProjectId];
+  var idToDelete=currentProjectId;
+  delete app.projects[idToDelete];
   saveApp(app);
-  sbDeleteProject(currentProjectId);
-  goHome();
+  sbDeleteProject(idToDelete).then(function(){
+    goHome();
+  });
 }
 
 // -- TASK IDS ---------------------------------------------------------------
@@ -3232,7 +3248,8 @@ function cancelCardDelete(id){
   document.getElementById('delconfirm-'+id).style.display='none';
 }
 function doCardDelete(id){
-  var app=loadApp(); delete app.projects[id]; saveApp(app); sbDeleteProject(id); renderHome();
+  var app=loadApp(); delete app.projects[id]; saveApp(app); renderHome();
+  sbDeleteProject(id);
 }
 
 // -- CHECKLIST --------------------------------------------------------------
@@ -3878,9 +3895,18 @@ function enterSignedInApp(){
   }).then(function(){
     return sbFetchAllProjects();
   }).then(function(remote){
-    if(remote && Object.keys(remote.projects).length > 0){
+    if(remote){
+      // Remote is the source of truth once a user is signed in: merge in
+      // anything new from the cloud, but also DROP any locally-cached
+      // project that no longer exists remotely (e.g. deleted on this or
+      // another device). Object.assign alone can only add/overwrite keys,
+      // never remove them, which is what let deleted projects silently
+      // come back after a refresh.
       var local = loadApp();
       var merged = { projects: Object.assign({}, local.projects, remote.projects) };
+      Object.keys(merged.projects).forEach(function(id){
+        if(!remote.projects[id]) delete merged.projects[id];
+      });
       _appCache = merged;
       try{ lsSet('pm_playbook_v2', JSON.stringify(merged)); }catch(e){}
     }
