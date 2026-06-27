@@ -371,7 +371,7 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
         <button class="btn-ghost" onclick="cancelTemplatePicker()" style="font-size:12px;padding:6px 12px;">Cancel</button>
       </div>
     </div>
-    <div style="text-align:center;margin-top:-.5rem;margin-bottom:1rem;">
+    <div id="home-status-row" style="text-align:center;margin-top:-.5rem;margin-bottom:1rem;">
       <span id="cloud-sync-ind" style="font-size:.75rem;color:var(--muted);">Connecting...</span>
       <button onclick="toggleAiSettingsBox()" title="Set your Anthropic API key for AI drafting"
         style="background:none;border:none;color:var(--faint);cursor:pointer;padding:2px;margin-left:8px;vertical-align:middle;">
@@ -3089,6 +3089,8 @@ function openTemplatePicker(){
   select.innerHTML = buildTemplateOptionsHTML() + '<option value="__upload__">Upload my own template...</option>';
   select.value = getDefaultTemplateKeyForCurrentUser();
   picker.style.display = 'block';
+  var statusRow = document.getElementById('home-status-row');
+  if(statusRow) statusRow.style.marginTop = '1.25rem';
 }
 
 function handleTemplatePickerSelectChange(value){
@@ -3143,11 +3145,15 @@ function confirmTemplatePicker(){
   var templateId = select ? select.value : getDefaultTemplateKeyForCurrentUser();
   if(templateId === '__upload__') return; // upload still in progress, ignore
   document.getElementById('template-picker').style.display = 'none';
+  var statusRow = document.getElementById('home-status-row');
+  if(statusRow) statusRow.style.marginTop = '-.5rem';
   startNewProject(templateId);
 }
 
 function cancelTemplatePicker(){
   document.getElementById('template-picker').style.display = 'none';
+  var statusRow = document.getElementById('home-status-row');
+  if(statusRow) statusRow.style.marginTop = '-.5rem';
 }
 
 function createMyRecProject(){
