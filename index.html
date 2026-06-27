@@ -355,16 +355,18 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
 
   <!-- -- PROJECT PAGE ---------------------------------------- -->
   <div id="page-project" class="page">
-    <div class="project-header">
-      <button class="back-btn" onclick="goHome()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        All projects
-      </button>
-      <div class="project-name-wrap">
-        <input class="project-name-input" id="project-name-input" type="text" placeholder="Untitled project" oninput="onNameInput()">
-        <button class="save-name-btn" id="save-name-btn" onclick="saveName()">Save name</button>
+    <div class="project-header" style="flex-wrap:nowrap;flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <button class="back-btn" onclick="goHome()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          All projects
+        </button>
+        <div class="project-name-wrap">
+          <input class="project-name-input" id="project-name-input" type="text" placeholder="Untitled project" oninput="onNameInput()">
+          <button class="save-name-btn" id="save-name-btn" onclick="saveName()">Save name</button>
+        </div>
       </div>
-      <div class="save-bar">
+      <div class="save-bar" style="margin-top:.75rem;flex-wrap:wrap;">
         <span class="save-indicator" id="save-ind">All changes saved</span>
         <select id="project-template-select" onchange="handleProjectTemplateSelectChange(this.value)"
           style="font-family:inherit;font-size:12px;border:1px solid var(--border-strong);border-radius:7px;padding:6px 8px;background:var(--surface);color:var(--text);outline:none;"></select>
