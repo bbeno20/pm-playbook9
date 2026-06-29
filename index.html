@@ -2912,7 +2912,7 @@ function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 // -- SUPABASE SYNC ------------------------------------------------------------
 var SUPABASE_URL = 'https://crnbecpbdupmeeadnijy.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_40bIQ5yc4wxU9IB4MzIRdw_j5RV65pK';
-var SITE_URL = 'https://bbeno20.github.io/pm-playbook/';
+var SITE_URL = 'https://bbeno20.github.io/pm-playbook9/';
 var _sb = null;
 var _sbReady = false;
 var _appCache = null;
@@ -4487,6 +4487,32 @@ function deckFrow(slide, label, val, x, y, w, h){
   return y + h + 0.18;
 }
 
+var DECK_SLIDE_MAX_Y = 5.2; // bottom safe margin on a 5.63in-tall slide
+
+// Overflow-aware version of deckFrow: if the row wouldn't fit on the
+// current slide, starts a new slide (with the same header, marked
+// "continued") and writes the row there instead, rather than letting
+// content run past the bottom edge or silently dropping it. Returns
+// {slide, y} since the active slide can change mid-call.
+function deckFrowFlow(pptx, slide, title, label, val, x, y, w, h){
+  if(!val) return { slide: slide, y: y };
+  // The caller's h is sized for a "typical" short answer -- but deckFrow's
+  // body text is 18pt Open Sans Light, and a long answer wraps to more
+  // lines than that fixed height allows, which let long text silently
+  // overlap the next row instead of triggering an overflow to a new
+  // slide. Estimate the real height from the actual text length so the
+  // overflow check (and the row itself) account for genuinely long answers.
+  var CHARS_PER_LINE = Math.max(20, Math.floor(w * 11)); // ~11 chars/inch at 18pt
+  var estLines = Math.max(1, Math.ceil(String(val).length / CHARS_PER_LINE));
+  var neededH = Math.max(h, 0.34 + estLines * 0.3);
+  if(y + neededH > DECK_SLIDE_MAX_Y){
+    slide = pptx.addSlide();
+    y = deckHdr(slide, title + ' (continued)');
+  }
+  y = deckFrow(slide, label, val, x, y, w, neededH);
+  return { slide: slide, y: y };
+}
+
 function deckTwoCol(slide, labelL, valL, labelR, valR, y){
   var lw=4.3, rw=4.3, lx=0.5, rx=5.1, h=1.6;
   if(valL){
@@ -4521,11 +4547,29 @@ var DECK_SLIDE_BUILDERS = {
 
   generic: function(pptx, title, data, taskId){
     var notes = ((data['note_'+taskId]||{}).notes||'').trim();
-    if(!notes) return false;
-    var slide = pptx.addSlide();
-    deckHdr(slide, title);
-    slide.addText(notes, { x:0.5, y:1.15, w:8.6, h:3.85, fontFace:'Open Sans Light', fontSize:18, color:DECK_TXT, valign:'top' });
-    return true;
+    if(!notes) return 0;
+    // A single free-text field has no natural break points the way
+    // labeled rows do, so estimate how much fits in one slide's text box
+    // (roughly 600 characters at 18pt across 8.6in x 3.85in) and split
+    // onto continuation slides rather than letting it run past the
+    // bottom or get silently clipped.
+    var CHARS_PER_SLIDE = 600;
+    var chunks = [];
+    var remaining = notes;
+    while(remaining.length > 0){
+      if(remaining.length <= CHARS_PER_SLIDE){ chunks.push(remaining); break; }
+      // Break at the nearest preceding space so words don't get cut mid-way.
+      var cut = remaining.lastIndexOf(' ', CHARS_PER_SLIDE);
+      if(cut <= 0) cut = CHARS_PER_SLIDE;
+      chunks.push(remaining.slice(0, cut));
+      remaining = remaining.slice(cut).trim();
+    }
+    chunks.forEach(function(chunk, i){
+      var slide = pptx.addSlide();
+      deckHdr(slide, i === 0 ? title : title + ' (continued)');
+      slide.addText(chunk, { x:0.5, y:1.15, w:8.6, h:3.85, fontFace:'Open Sans Light', fontSize:18, color:DECK_TXT, valign:'top' });
+    });
+    return chunks.length;
   },
 
   why: function(pptx, title, data){
@@ -4534,7 +4578,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['WHY',why.why],['HOW',why.how],['WHAT',why.what]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 1.0);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 1.0); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4545,7 +4589,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['COMPANY',fc.company],['CUSTOMERS',fc.customers],['COLLABORATORS',fc.collaborators],['COMPETITORS',fc.competitors],['CLIMATE',fc.climate]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.75);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4556,7 +4600,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title, per.name||'');
     [['GOALS',per.goals],['KEY PAINS',per.pains],['SUCCESS',per.success],['CONTEXT',per.context]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.85);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.85); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4566,10 +4610,10 @@ var DECK_SLIDE_BUILDERS = {
     if(!(nps.score||nps.promoters||nps.detractors)) return false;
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
-    if(nps.score) y = deckFrow(slide, 'NPS SCORE', nps.score, 0.5, y, 8.6, 0.6);
+    if(nps.score){ var r1 = deckFrowFlow(pptx, slide, title, 'NPS SCORE', nps.score, 0.5, y, 8.6, 0.6); slide = r1.slide; y = r1.y; }
     deckTwoCol(slide, 'PROMOTERS SAY', nps.promoters, 'DETRACTORS SAY', nps.detractors, y);
     y += 1.7;
-    if(nps.actions) deckFrow(slide, 'ACTION ITEMS', nps.actions, 0.5, y, 8.6, 0.85);
+    if(nps.actions){ var r2 = deckFrowFlow(pptx, slide, title, 'ACTION ITEMS', nps.actions, 0.5, y, 8.6, 0.85); slide = r2.slide; y = r2.y; }
     return true;
   },
 
@@ -4600,7 +4644,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['CURRENT STATE',jn.current],['JOURNEY STEPS',jn.steps],['MOTIVATIONS',jn.motivations],['HINDRANCES',jn.hindrances],['DESIRED STATE',jn.desired]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.75);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4627,7 +4671,7 @@ var DECK_SLIDE_BUILDERS = {
     [['VALUE PROPOSITIONS',bmc.value],['CUSTOMER SEGMENTS',bmc.segments],['CHANNELS',bmc.channels],
      ['CUSTOMER RELATIONSHIPS',bmc.relationships],['KEY ACTIVITIES',bmc.activities],['KEY RESOURCES',bmc.resources],
      ['REVENUE STREAMS',bmc.revenue],['COST STRUCTURE',bmc.costs]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.55);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.55); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4638,7 +4682,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['ACQUISITION',aa.acquisition],['ACTIVATION',aa.activation],['RETENTION',aa.retention],['REFERRAL',aa.referral],['REVENUE',aa.revenue]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.75);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4650,7 +4694,7 @@ var DECK_SLIDE_BUILDERS = {
     var y = deckHdr(slide, title);
     [['HEADLINE',pr.headline],['SUMMARY',pr.summary],['PROBLEM',pr.problem],['SOLUTION',pr.solution],
      ['PM QUOTE',pr.pmquote],['CUSTOMER QUOTE',pr.custquote],['CALL TO ACTION',pr.cta]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.6);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4661,7 +4705,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['REVIEWER FOCUS',pr.focus],['TRADE-OFFS',pr.tradeoffs],['DIFFERENTIATION',pr.differentiation],['REVIEWER CONCLUSION',pr.conclusion]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.9);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.9); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4672,7 +4716,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['MVP GOAL',mv.goal],['IN SCOPE',mv.features],['OUT OF SCOPE',mv.cuts],['DELIGHTERS TO PROTECT',mv.delighters]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.8);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4684,7 +4728,7 @@ var DECK_SLIDE_BUILDERS = {
     var y = deckHdr(slide, title, prd.title||'');
     [['OVERVIEW',prd.overview],['OBJECTIVES',prd.objectives],['SUCCESS METRICS',prd.metrics],['MESSAGING',prd.messaging],
      ['TIMELINE',prd.timeline],['FEATURES IN',prd.featuresin],['FEATURES OUT',prd.featuresout],['OPEN ISSUES',prd.issues]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.6);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4696,7 +4740,7 @@ var DECK_SLIDE_BUILDERS = {
     var y = deckHdr(slide, title, 'Simplified PRD');
     [['VISION',sp.vision],['PRESS RELEASE',sp.pressrelease],['USER STORIES',sp.stories],['SCREENS TO BUILD',sp.screens],
      ['FUNCTIONAL REQUIREMENTS',sp.functional],['SMART BEHAVIORS',sp.behaviors],['TECHNICAL CONSTRAINTS',sp.constraints],['DECISION LOG',sp.decisions]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.6);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4707,7 +4751,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['MUST HAVE',mc.must],['SHOULD HAVE',mc.should],['COULD HAVE',mc.could],['WILL NOT HAVE (NOW)',mc.wont]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.8);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4718,7 +4762,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['SCENARIO 1',us.s1],['SCENARIO 2',us.s2],['SCENARIO 3',us.s3]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 1.2);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 1.2); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4729,7 +4773,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['UX GOAL',db.goal],['CONSTRAINTS',db.constraints],['PRIMARY PERSONA',db.persona],['SUCCESS CRITERIA',db.success]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.8);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4740,7 +4784,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['TASKS GIVEN',ut.tasks],['SUCCESS RATE',ut.results],['KEY FRICTION POINTS',ut.friction],['DESIGN CHANGES',ut.changes]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.85);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.85); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4751,7 +4795,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title, ds.challenge||'');
     [['UNDERSTAND',ds.understand],['FOCUSED PROBLEM',ds.define],['WINNING IDEA',ds.decide],['PROTOTYPE',ds.prototype],['CUSTOMER TEST RESULTS',ds.test]].forEach(function(pair){
-      if(pair[1] && y < 5.0) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.75);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4819,7 +4863,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     [['WHAT IS AT RISK',eb.risk],['WHAT CAN BE CUT',eb.cuts],['NON-NEGOTIABLE',eb.fixed],['DECISION LOG',eb.decisions]].forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.8);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
@@ -4841,14 +4885,14 @@ var DECK_SLIDE_BUILDERS = {
     if(!summary && !interviews.length) return false;
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
-    if(summary) y = deckFrow(slide, 'OVERALL TREND / SUMMARY', summary, 0.5, y, 8.6, 1.0);
+    if(summary){ var rs = deckFrowFlow(pptx, slide, title, 'OVERALL TREND / SUMMARY', summary, 0.5, y, 8.6, 1.0); slide = rs.slide; y = rs.y; }
     for(var i=0; i<Math.min(interviews.length,4); i++){
       var iv = interviews[i];
       var v = (iv.verdict || iv.notes || '').slice(0,120);
       if(!v) continue;
       var nm = iv.name || ('Interview '+(i+1));
-      y = deckFrow(slide, nm, v, 0.5, y, 8.6, 0.65);
-      if(y > 5.0) break;
+      var ri = deckFrowFlow(pptx, slide, title, nm, v, 0.5, y, 8.6, 0.65);
+      slide = ri.slide; y = ri.y;
     }
     return true;
   },
@@ -4876,7 +4920,7 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     fields.forEach(function(pair){
-      if(pair[1]) y = deckFrow(slide, pair[0], pair[1], 0.5, y, 8.6, 0.75);
+      var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   }
@@ -4909,6 +4953,15 @@ function generateDeckClientSide(projectName, payload, templateId){
   pptx.defineLayout({ name: 'MYREC', width: 10, height: 5.63 });
   pptx.layout = 'MYREC';
 
+  // Count slides by wrapping addSlide directly, rather than relying on
+  // every builder to accurately report how many slides it created --
+  // builders can now add continuation slides via deckFrowFlow when
+  // content overflows, and a per-builder count would drift out of sync
+  // the moment a new overflow path is added without updating its return.
+  var realSlideCount = 0;
+  var _origAddSlide = pptx.addSlide.bind(pptx);
+  pptx.addSlide = function(){ realSlideCount++; return _origAddSlide.apply(pptx, arguments); };
+
   var data = (payload && payload.data) || {};
   var tasks = (payload && payload.tasks) || [];
 
@@ -4925,7 +4978,6 @@ function generateDeckClientSide(projectName, payload, templateId){
   });
 
   var renderedShared = {};
-  var slideCount = 1;
 
   // Product foundation slide -- always the second slide, right after the
   // cover, if at least one of the five questions has been answered. Same
@@ -4945,11 +4997,14 @@ function generateDeckClientSide(projectName, payload, templateId){
       // wrap can never collide with the next field's label.
       var estLines = Math.max(1, Math.ceil(text.length / 100));
       var rowH = 0.3 + estLines * 0.26;
+      if(fy2 + rowH > DECK_SLIDE_MAX_Y){
+        fSlide = pptx.addSlide();
+        fy2 = deckHdr(fSlide, 'Product Foundation (continued)');
+      }
       fSlide.addText(f.label, { x:0.5, y:fy2, w:9.0, h:0.26, fontFace:'Open Sans SemiBold', fontSize:12, bold:true, color:DECK_TXT });
       fSlide.addText(text, { x:0.5, y:fy2+0.27, w:9.0, h:rowH-0.27, fontFace:'Open Sans Light', fontSize:15, color:DECK_TXT, valign:'top' });
       fy2 += rowH + 0.12;
     });
-    slideCount++;
   }
 
   tasks.forEach(function(task){
@@ -4960,16 +5015,15 @@ function generateDeckClientSide(projectName, payload, templateId){
     if(builder){
       if(renderedShared[modal]) return; // one slide per shared workspace, not per task
       var built = builder(pptx, taskTitle, data, taskId);
-      if(built){ renderedShared[modal] = true; slideCount++; }
+      if(built) renderedShared[modal] = true;
     } else if(DECK_NOTES_MODALS.indexOf(modal) >= 0){
-      var built2 = DECK_SLIDE_BUILDERS.generic(pptx, taskTitle, data, taskId);
-      if(built2) slideCount++;
+      DECK_SLIDE_BUILDERS.generic(pptx, taskTitle, data, taskId);
     }
   });
 
   var fileName = ((projectName || 'Untitled project').trim() + ' Slide Deck').replace(/[\/\\:*?"<>|]+/g, '').trim() + '.pptx';
   return pptx.writeFile({ fileName: fileName }).then(function(){
-    return slideCount;
+    return realSlideCount;
   });
 }
 
