@@ -56,6 +56,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   align-items:center;justify-content:center;flex-direction:column;
 }
 .present-mode-overlay.open{display:flex;}
+#company-push-confirm-overlay{background:rgba(20,18,15,.55);}
 .present-mode-slide-wrap{
   width:96vw;height:calc(96vw * 9 / 16);max-height:90vh;max-width:calc(90vh * 16 / 9);
   background:#fff;border-radius:4px;overflow:hidden;box-shadow:0 10px 60px rgba(0,0,0,.5);
@@ -368,7 +369,14 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
       </button>
     </div>
     <div id="template-picker" style="display:none;max-width:420px;margin:10px auto 0;text-align:left;border:1px solid var(--border);border-radius:9px;padding:14px 16px;background:var(--surface);">
-      <div style="font-size:.8rem;font-weight:600;margin-bottom:8px;">Which PowerPoint template should this project use?</div>
+      <div style="font-size:.8rem;font-weight:600;margin-bottom:8px;">Company (optional)</div>
+      <select id="company-picker-select" onchange="handleCompanyPickerSelectChange(this.value)" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;background:var(--surface);"></select>
+      <div id="company-picker-new-row" style="display:none;margin-top:8px;">
+        <input type="text" id="company-picker-new-input" placeholder="Company name..."
+          style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;">
+      </div>
+      <div style="font-size:.72rem;color:var(--faint);margin-top:6px;">Sharing a company links "Understand the company" and "Define your customers" across every project that uses it. Only visible to you.</div>
+      <div style="font-size:.8rem;font-weight:600;margin-bottom:8px;margin-top:14px;">Which PowerPoint template should this project use?</div>
       <select id="template-picker-select" onchange="handleTemplatePickerSelectChange(this.value)" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;background:var(--surface);"></select>
       <input type="file" id="template-picker-upload-input" accept=".pptx" style="display:none;" onchange="handleTemplatePickerFileSelected(this.files)">
       <div id="template-picker-upload-status" style="font-size:.72rem;color:var(--faint);margin-top:4px;"></div>
@@ -423,6 +431,7 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
           <input class="project-name-input" id="project-name-input" type="text" placeholder="Untitled project" oninput="onNameInput()">
           <button class="save-name-btn" id="save-name-btn" onclick="saveName()">Save name</button>
         </div>
+        <span id="project-company-badge" style="display:none;font-size:11px;color:var(--accent);background:var(--accent-light);border-radius:20px;padding:4px 10px;white-space:nowrap;flex-shrink:0;"></span>
       </div>
       <div class="save-bar" style="margin-top:.75rem;flex-wrap:wrap;">
         <span class="save-indicator" id="save-ind">All changes saved</span>
@@ -562,6 +571,17 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
       </div>
     </div>
     <div class="mobile-preview-nav-corner" id="mobile-slide-preview-nav"></div>
+  </div>
+</div>
+
+<div class="present-mode-overlay" id="company-push-confirm-overlay" style="z-index:400;" onclick="if(event.target===this)cancelCompanyPushConfirm()">
+  <div style="background:var(--surface);border-radius:14px;max-width:420px;padding:22px 24px;color:var(--text);">
+    <div style="font-weight:600;font-size:15px;margin-bottom:10px;">This can't be undone</div>
+    <div id="company-push-confirm-message" style="font-size:13.5px;line-height:1.5;color:var(--muted);margin-bottom:18px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-ghost" onclick="cancelCompanyPushConfirm()" style="font-size:13px;padding:7px 14px;">Cancel</button>
+      <button class="btn-primary" onclick="executeCompanyPushConfirm()" style="font-size:13px;padding:7px 14px;">Update company</button>
+    </div>
   </div>
 </div>
 
@@ -1625,6 +1645,24 @@ function renderAiScopeProposal(parsed){
     '<input type="file" id="ai-scope-template-upload-input" accept=".pptx" style="display:none;" onchange="handleAiScopeTemplateFileSelected(this.files)">' +
     '<div id="ai-scope-template-upload-status" style="font-size:11px;color:var(--faint);margin-top:4px;"></div>' +
     '</div>';
+  var hasCompanyPhases = validIds.some(function(stepId){
+    var step = findStepById(stepId);
+    return step && COMPANY_PHASE_IDS.indexOf(step.phaseId) >= 0;
+  });
+  if(hasCompanyPhases){
+    html += '<div style="margin-top:14px;">' +
+      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;">Company (optional)</div>' +
+      '<select id="ai-scope-company-select" onchange="handleAiScopeCompanySelectChange(this.value)" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;background:var(--surface);">' +
+      '<option value="">No company</option>' +
+      getCompanyList().map(function(c){ return '<option value="'+c.id+'">'+esc(c.name)+'</option>'; }).join('') +
+      '<option value="__new__">Add new company...</option>' +
+      '</select>' +
+      '<div id="ai-scope-company-new-row" style="display:none;margin-top:8px;">' +
+      '<input type="text" id="ai-scope-company-new-input" placeholder="Company name..." style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;">' +
+      '</div>' +
+      '<div style="font-size:.72rem;color:var(--faint);margin-top:6px;">Sharing a company links "Understand the company" and "Define your customers" across every project that uses it.</div>' +
+      '</div>';
+  }
   html += '<div style="display:flex;gap:8px;margin-top:14px;">' +
     '<button class="btn-primary" onclick="approveAiScopeProposal()">Create this project</button>' +
     '<button class="btn-ghost" onclick="rejectAiScopeProposal()">Keep refining</button>' +
@@ -1639,6 +1677,29 @@ function rejectAiScopeProposal(){
   document.getElementById('ai-scope-proposal').style.display = 'none';
   aiScopeProposedSteps = null;
   addAiScopeBubble('assistant', 'No problem -- tell me what to change and I will revise the proposal.');
+}
+
+function handleAiScopeCompanySelectChange(value){
+  var newRow = document.getElementById('ai-scope-company-new-row');
+  if(!newRow) return;
+  newRow.style.display = (value === '__new__') ? 'block' : 'none';
+  if(value === '__new__'){
+    var input = document.getElementById('ai-scope-company-new-input');
+    if(input){ input.value = ''; input.focus(); }
+  }
+}
+
+function resolveAiScopeCompanySelection(){
+  var select = document.getElementById('ai-scope-company-select');
+  if(!select || !select.value) return null;
+  if(select.value === '__new__'){
+    var nameInput = document.getElementById('ai-scope-company-new-input');
+    var name = (nameInput && nameInput.value || '').trim();
+    if(!name) return null;
+    var company = createCompany(name);
+    return company.id;
+  }
+  return select.value;
 }
 
 function approveAiScopeProposal(){
@@ -1658,11 +1719,20 @@ function approveAiScopeProposal(){
   var templateSelect = document.getElementById('ai-scope-template-select');
   var chosenTemplate = (templateSelect && templateSelect.value && templateSelect.value !== '__upload__')
     ? templateSelect.value : getDefaultTemplateKeyForCurrentUser();
+  var companyId = resolveAiScopeCompanySelection();
+  var projData = {};
+  if(companyId){
+    var company = getCompany(companyId);
+    if(company){
+      Object.assign(projData, company.understandData || {});
+      Object.assign(projData, company.customersData || {});
+    }
+  }
   var app = loadApp();
   app.projects[id] = {
     id: id, name: '', phaseSet: 'custom', customPhases: customPhases,
-    template: chosenTemplate,
-    checks: {}, data: {}, created: Date.now(), updated: Date.now()
+    template: chosenTemplate, companyId: companyId || null,
+    checks: {}, data: projData, created: Date.now(), updated: Date.now()
   };
   saveApp(app);
   // Carry the original scoping conversation into this project's own AI chat,
@@ -3032,6 +3102,7 @@ function sbFetchAllProjects(){
         extraSteps: row.extra_steps || [], customPhases: row.custom_phases || null,
         template: row.deck_template || DEFAULT_TEMPLATE_KEY,
         sources: row.sources || [],
+        companyId: row.company_id || null,
         created: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
         updated: row.updated_at ? new Date(row.updated_at).getTime() : Date.now()
       };
@@ -3047,7 +3118,8 @@ function sbUpsertProject(proj){
     checks: proj.checks || {}, data: proj.data || {},
     extra_steps: proj.extraSteps || [], custom_phases: proj.customPhases || null,
     deck_template: proj.template || DEFAULT_TEMPLATE_KEY,
-    sources: proj.sources || []
+    sources: proj.sources || [],
+    company_id: proj.companyId || null
   }).then(function(res){
     if(res.error) console.warn('Supabase save failed:', res.error.message);
   }).catch(function(e){ console.warn('Supabase save error:', e); });
@@ -3161,6 +3233,284 @@ function saveProject(proj){
 }
 function getKey(k){var p=getProject(currentProjectId);return p.data?p.data[k]:null;}
 
+// -- PER-STEP LINKS & ATTACHMENTS ---------------------------------------------
+// Stored under data['links_'+taskId] as an array of
+// {id, type:'link'|'file', label, url, included}. `included` is the one
+// checkbox per item controlling whether it shows in the pptx/preview.
+// -- COMPANIES -----------------------------------------------------------------
+// Private per-user shared records for "Understand the company" (p1) and
+// "Define your customers" (p2). A project keeps its own copy of this data
+// by default; pushing to the company is an explicit, one-way action.
+var COMPANY_PHASE_IDS = ['p1', 'p2'];
+var _companies = {}; // id -> {id, name, understandData, customersData}
+var _companiesLoaded = false;
+
+function loadCompanies(){
+  if(!_sbReady) return Promise.resolve();
+  return _sb.from('pm_companies').select('*').then(function(res){
+    if(res.error || !res.data) return;
+    _companies = {};
+    res.data.forEach(function(row){
+      _companies[row.id] = {
+        id: row.id, name: row.name || '',
+        understandData: row.understand_data || {},
+        customersData: row.customers_data || {}
+      };
+    });
+    _companiesLoaded = true;
+  }).catch(function(){});
+}
+
+var _companyRealtimeChannel = null;
+
+function subscribeToCompanyUpdates(){
+  if(!_sbReady || !_sb.channel) return;
+  if(_companyRealtimeChannel) return; // already subscribed this session
+  _companyRealtimeChannel = _sb.channel('pm_companies_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pm_companies' }, function(payload){
+      var row = payload.new;
+      if(!row || !row.id) return;
+      _companies[row.id] = {
+        id: row.id, name: row.name || '',
+        understandData: row.understand_data || {},
+        customersData: row.customers_data || {}
+      };
+      // Reflect the change immediately in any open project that uses this
+      // company, without requiring a refresh -- this only updates what's
+      // currently on screen; applyCompanyDataToAllLocalProjects (called by
+      // whichever tab actually pushed the change) is what persists it to
+      // every affected project's own saved data.
+      var proj = currentProjectId ? getProject(currentProjectId) : null;
+      if(proj && proj.companyId === row.id){
+        syncCompanyBadge(proj);
+        if(currentModalTask && currentModalTask.id){
+          var modalBody = document.getElementById('modal-body');
+          if(modalBody) modalBody.innerHTML = buildModalHTML(currentModalTask.modal, currentModalTask.id);
+        }
+        refreshSlidePreviewInPlace();
+      }
+    })
+    .subscribe();
+}
+
+function getCompanyList(){
+  return Object.values(_companies).sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+}
+
+function getCompany(id){
+  return _companies[id] || null;
+}
+
+function createCompany(name){
+  var id = 'co_' + Date.now();
+  var company = { id: id, name: name || 'Untitled company', understandData: {}, customersData: {} };
+  _companies[id] = company;
+  if(_sbReady){
+    _sb.from('pm_companies').insert({
+      id: id, name: company.name, understand_data: {}, customers_data: {}
+    }).then(function(res){
+      if(res.error) console.warn('Could not save company:', res.error.message);
+    }).catch(function(){});
+  }
+  return company;
+}
+
+function getCompanyPhaseDataKey(phaseId){
+  // p1 ("Understand the company") and p2 ("Define your customers") each
+  // map to a slice of the company record.
+  return phaseId === 'p1' ? 'understandData' : 'customersData';
+}
+
+// Pushes this project's current data for one step (or every step in a
+// phase) into the shared company record, then immediately updates every
+// other locally-cached project that uses the same company so an open tab
+// reflects the change without needing a refresh. This is the one-way
+// action the UI warns about before calling it.
+function pushStepToCompany(companyId, taskId){
+  var company = getCompany(companyId);
+  if(!company) return;
+  var task = findStepById(taskId);
+  if(!task) return;
+  var phaseId = task.phaseId; // set by buildFlatStepList/findStepById's lookup
+  var dataKey = getCompanyPhaseDataKey(phaseId);
+  var modal = task.modal || 'generic';
+  var stepKey = modal === 'generic' ? ('note_'+taskId) : modal;
+
+  // For shared-workspace modals (why, persona, fivec) every step in the
+  // phase reads/writes the SAME data[modal] object, so pushing "one step"
+  // really means pushing that shared object's current state.
+  var proj = getProject(currentProjectId);
+  var currentValue = (proj.data || {})[stepKey];
+  if(currentValue === undefined) return;
+
+  company[dataKey][stepKey] = currentValue;
+  saveCompanyToCloud(company);
+  applyCompanyDataToAllLocalProjects(companyId, dataKey, stepKey, currentValue);
+}
+
+function pushPhaseToCompany(companyId, phaseId){
+  var company = getCompany(companyId);
+  if(!company) return;
+  var dataKey = getCompanyPhaseDataKey(phaseId);
+  var proj = getProject(currentProjectId);
+  var phaseDef = (phaseId === 'p1' ? PHASES[0] : PHASES[1]); // p1/p2 are always PHASES[0]/[1] in the standard set
+  var keysForPhase = {};
+  phaseDef.tasks.forEach(function(t){
+    var modal = t.modal || 'generic';
+    var stepKey = modal === 'generic' ? ('note_'+t.id) : modal;
+    keysForPhase[stepKey] = true;
+  });
+  Object.keys(keysForPhase).forEach(function(stepKey){
+    var currentValue = (proj.data || {})[stepKey];
+    if(currentValue !== undefined) company[dataKey][stepKey] = currentValue;
+  });
+  saveCompanyToCloud(company);
+  Object.keys(keysForPhase).forEach(function(stepKey){
+    if(company[dataKey][stepKey] !== undefined){
+      applyCompanyDataToAllLocalProjects(companyId, dataKey, stepKey, company[dataKey][stepKey]);
+    }
+  });
+}
+
+function saveCompanyToCloud(company){
+  if(!_sbReady) return;
+  _sb.from('pm_companies').update({
+    name: company.name, understand_data: company.understandData, customers_data: company.customersData
+  }).eq('id', company.id).then(function(res){
+    if(res.error) console.warn('Could not save company update:', res.error.message);
+  }).catch(function(){});
+}
+
+// Updates every locally-cached project that uses this company with the
+// newly-pushed value, so they're correct the next time they're opened --
+// and, combined with the realtime subscription, reflects live in any
+// project of the same company that's open right now.
+function applyCompanyDataToAllLocalProjects(companyId, dataKey, stepKey, value){
+  var app = loadApp();
+  var changed = false;
+  Object.values(app.projects || {}).forEach(function(p){
+    if(p.companyId === companyId){
+      if(!p.data) p.data = {};
+      p.data[stepKey] = value;
+      changed = true;
+      if(p.id === currentProjectId){
+        // Currently open project -- refresh what's on screen immediately.
+        if(currentModalTask && currentModalTask.id){
+          document.getElementById('modal-body') && (document.getElementById('modal-body').innerHTML = buildModalHTML(currentModalTask.modal, currentModalTask.id));
+        }
+        refreshSlidePreviewInPlace();
+      }
+    }
+  });
+  if(changed) saveApp(app);
+}
+
+function getStepLinks(taskId){
+  return getKey('links_'+taskId) || [];
+}
+
+function saveStepLinks(taskId, links){
+  setKey('links_'+taskId, links);
+}
+
+function stepLinkRowHTML(taskId, item, i){
+  var icon = item.type === 'file'
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">' +
+    '<input type="checkbox" '+(item.included?'checked':'')+' onchange="toggleStepLinkIncluded(\''+taskId+'\','+i+',this.checked)" title="Show in slide deck and preview" style="accent-color:var(--accent);cursor:pointer;flex-shrink:0;">' +
+    '<span style="color:var(--faint);flex-shrink:0;">'+icon+'</span>' +
+    '<a href="'+esc(item.url)+'" target="_blank" rel="noopener" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text);text-decoration:none;border-bottom:1px dotted var(--border-strong);">'+esc(item.label||item.url)+'</a>' +
+    '<button onclick="removeStepLink(\''+taskId+'\','+i+')" style="background:none;border:none;color:var(--faint);cursor:pointer;padding:2px;flex-shrink:0;" title="Remove">&#x2715;</button>' +
+    '</div>';
+}
+
+function buildStepLinksHTML(taskId){
+  var links = getStepLinks(taskId);
+  var rows = links.map(function(item, i){ return stepLinkRowHTML(taskId, item, i); }).join('');
+
+  return '<div class="modal-section" style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.25rem;">' +
+    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">Links &amp; attachments</div>' +
+    '<div id="step-links-list-'+taskId+'">' + (rows || '<div style="font-size:.8rem;color:var(--faint);">None added yet.</div>') + '</div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+    '<input type="text" id="step-link-input-'+taskId+'" placeholder="Paste a link..." style="flex:1;min-width:160px;box-sizing:border-box;padding:6px 9px;border:1px solid var(--border-strong);border-radius:7px;font-family:inherit;font-size:13px;outline:none;background:var(--bg);" onkeydown="if(event.key===\'Enter\'){addStepLink(\''+taskId+'\');}">' +
+    '<button class="btn-sm" onclick="addStepLink(\''+taskId+'\')">Add link</button>' +
+    '<input type="file" id="step-file-input-'+taskId+'" style="display:none;" onchange="handleStepFileSelected(\''+taskId+'\',this.files)">' +
+    '<button class="btn-sm" onclick="document.getElementById(\'step-file-input-'+taskId+'\').click()">Attach file</button>' +
+    '</div>' +
+    '<div id="step-links-status-'+taskId+'" style="font-size:.75rem;color:var(--faint);margin-top:6px;min-height:1.1em;"></div>' +
+    '</div>';
+}
+
+function addStepLink(taskId){
+  var input = document.getElementById('step-link-input-'+taskId);
+  var url = (input.value || '').trim();
+  if(!url) return;
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  var links = getStepLinks(taskId);
+  links.push({ id: 'lnk_'+Date.now(), type: 'link', label: url, url: url, included: true });
+  saveStepLinks(taskId, links);
+  rerenderStepLinks(taskId);
+  refreshSlidePreview();
+}
+
+function handleStepFileSelected(taskId, files){
+  if(!files || !files.length) return;
+  var file = files[0];
+  var statusEl = document.getElementById('step-links-status-'+taskId);
+  if(statusEl) statusEl.textContent = 'Attaching ' + file.name + '...';
+  // Small files only -- this embeds the file directly as a data URL since
+  // there's no file storage backend; large files would bloat the saved
+  // project data, so a sane cap keeps this usable rather than silently
+  // creating multi-megabyte rows.
+  var MAX_BYTES = 4 * 1024 * 1024;
+  if(file.size > MAX_BYTES){
+    if(statusEl) statusEl.textContent = 'That file is too large to attach (max 4MB). Try a link instead.';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(){
+    var links = getStepLinks(taskId);
+    links.push({ id: 'lnk_'+Date.now(), type: 'file', label: file.name, url: reader.result, included: true });
+    saveStepLinks(taskId, links);
+    rerenderStepLinks(taskId);
+    refreshSlidePreview();
+    if(statusEl) statusEl.textContent = '';
+  };
+  reader.onerror = function(){
+    if(statusEl) statusEl.textContent = 'Could not attach that file.';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('step-file-input-'+taskId).value = '';
+}
+
+function toggleStepLinkIncluded(taskId, index, checked){
+  var links = getStepLinks(taskId);
+  if(links[index]){
+    links[index].included = checked;
+    saveStepLinks(taskId, links);
+    refreshSlidePreview();
+  }
+}
+
+function removeStepLink(taskId, index){
+  var links = getStepLinks(taskId);
+  links.splice(index, 1);
+  saveStepLinks(taskId, links);
+  rerenderStepLinks(taskId);
+  refreshSlidePreview();
+}
+
+function rerenderStepLinks(taskId){
+  var container = document.getElementById('step-links-list-'+taskId);
+  if(!container) return;
+  var links = getStepLinks(taskId);
+  var rows = links.map(function(item, i){ return stepLinkRowHTML(taskId, item, i); }).join('');
+  container.innerHTML = rows || '<div style="font-size:.8rem;color:var(--faint);">None added yet.</div>';
+  var linkInput = document.getElementById('step-link-input-'+taskId);
+  if(linkInput) linkInput.value = '';
+}
+
 // -- PRODUCT FOUNDATION (pinned widget at top of each project) ---------------
 var PRODUCT_FOUNDATION_FIELDS = [
   { key: 'why', label: 'Why', question: 'Why does this product exist?' },
@@ -3220,10 +3570,31 @@ function goHome(){
   showPage('home');
 }
 
-function startNewProject(templateId){
+function startNewProject(templateId, companyId){
   var id='proj_'+Date.now();
-  saveProject({id:id,name:'',checks:{},data:{},template:templateId||DEFAULT_TEMPLATE_KEY,created:Date.now(),updated:Date.now()});
+  var data = {};
+  if(companyId){
+    var company = getCompany(companyId);
+    if(company){
+      Object.assign(data, company.understandData || {});
+      Object.assign(data, company.customersData || {});
+    }
+  }
+  saveProject({id:id,name:'',checks:{},data:data,template:templateId||DEFAULT_TEMPLATE_KEY,companyId:companyId||null,created:Date.now(),updated:Date.now()});
   openProject(id);
+}
+
+function resolveCompanyPickerSelection(){
+  var select = document.getElementById('company-picker-select');
+  if(!select || !select.value) return null;
+  if(select.value === '__new__'){
+    var nameInput = document.getElementById('company-picker-new-input');
+    var name = (nameInput && nameInput.value || '').trim();
+    if(!name) return null; // no name typed -- treat as no company rather than creating a blank one
+    var company = createCompany(name);
+    return company.id;
+  }
+  return select.value;
 }
 
 function openTemplatePicker(){
@@ -3232,9 +3603,32 @@ function openTemplatePicker(){
   if(!picker || !select) return;
   select.innerHTML = buildTemplateOptionsHTML() + '<option value="__upload__">Upload my own template...</option>';
   select.value = getDefaultTemplateKeyForCurrentUser();
+  populateCompanyPicker();
   picker.style.display = 'block';
   var statusRow = document.getElementById('home-status-row');
   if(statusRow) statusRow.style.marginTop = '1.25rem';
+}
+
+function populateCompanyPicker(){
+  var select = document.getElementById('company-picker-select');
+  if(!select) return;
+  var companies = getCompanyList();
+  select.innerHTML = '<option value="">No company</option>' +
+    companies.map(function(c){ return '<option value="'+c.id+'">'+esc(c.name)+'</option>'; }).join('') +
+    '<option value="__new__">Add new company...</option>';
+  select.value = '';
+  var newRow = document.getElementById('company-picker-new-row');
+  if(newRow) newRow.style.display = 'none';
+}
+
+function handleCompanyPickerSelectChange(value){
+  var newRow = document.getElementById('company-picker-new-row');
+  if(!newRow) return;
+  newRow.style.display = (value === '__new__') ? 'block' : 'none';
+  if(value === '__new__'){
+    var input = document.getElementById('company-picker-new-input');
+    if(input){ input.value = ''; input.focus(); }
+  }
 }
 
 function handleTemplatePickerSelectChange(value){
@@ -3250,6 +3644,18 @@ function handleTemplatePickerFileSelected(files){
     select.innerHTML = buildTemplateOptionsHTML() + '<option value="__upload__">Upload my own template...</option>';
     select.value = newTemplateId;
   });
+}
+
+function syncCompanyBadge(proj){
+  var badge = document.getElementById('project-company-badge');
+  if(!badge) return;
+  var company = proj.companyId ? getCompany(proj.companyId) : null;
+  if(company){
+    badge.textContent = company.name;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 function syncProjectTemplateSelect(proj){
@@ -3288,10 +3694,11 @@ function confirmTemplatePicker(){
   var select = document.getElementById('template-picker-select');
   var templateId = select ? select.value : getDefaultTemplateKeyForCurrentUser();
   if(templateId === '__upload__') return; // upload still in progress, ignore
+  var companyId = resolveCompanyPickerSelection();
   document.getElementById('template-picker').style.display = 'none';
   var statusRow = document.getElementById('home-status-row');
   if(statusRow) statusRow.style.marginTop = '-.5rem';
-  startNewProject(templateId);
+  startNewProject(templateId, companyId);
 }
 
 function cancelTemplatePicker(){
@@ -3422,6 +3829,7 @@ function openProject(id){
     var sb=document.getElementById('save-name-btn');
     if(sb) sb.classList.remove('visible');
     syncProjectTemplateSelect(proj);
+    syncCompanyBadge(proj);
     renderProductFoundation();
     buildPhasesUI();
     loadChecks();
@@ -3539,12 +3947,16 @@ function renderHome(){
     var pct=totalT>0?Math.round(done/totalT*100):0;
     var nm=proj.name||'Untitled project';
     var dt=formatRelativeDate(proj.updated);
+    var company = proj.companyId ? getCompany(proj.companyId) : null;
+    var companyBadgeHTML = company
+      ? '<span style="font-size:10.5px;color:var(--accent);background:var(--accent-light);border-radius:20px;padding:2px 8px;margin-left:8px;white-space:nowrap;">'+esc(company.name)+'</span>'
+      : '';
     var card=document.createElement('div');
     card.className='project-card'; card.id='card-'+proj.id;
     var inner=document.createElement('div');
     inner.className='project-clickable'; inner.style.cursor='pointer';
     inner.innerHTML=(
-      '<div class="project-card-name">'+nm+'</div>'
+      '<div class="project-card-name" style="display:flex;align-items:center;flex-wrap:wrap;">'+esc(nm)+companyBadgeHTML+'</div>'
       +'<div class="project-card-bar"><div class="project-card-fill" style="width:'+pct+'%"></div></div>'
       +'<div class="project-card-footer">'
       +'<span class="project-card-pct">'+pct+'% complete ('+done+'/'+totalT+' steps)</span>'
@@ -3696,10 +4108,22 @@ function buildPhasesUI(){
     }
     var phase=document.createElement('div');phase.className='phase';
     var head=document.createElement('div');head.className='phase-head';
+    var proj = getProject(currentProjectId);
+    var companyPhaseCheckboxHTML = '';
+    if(proj && proj.companyId && COMPANY_PHASE_IDS.indexOf(p.id) >= 0){
+      var company = getCompany(proj.companyId);
+      if(company){
+        companyPhaseCheckboxHTML = '<label onclick="event.stopPropagation();" title="Update '+esc(company.name)+' with every step in this phase" style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--faint);cursor:pointer;white-space:nowrap;">' +
+          '<input type="checkbox" onclick="event.stopPropagation();" onchange="if(this.checked){ confirmPushPhaseToCompany(\''+p.id+'\', this); }" style="accent-color:var(--accent);cursor:pointer;">' +
+          'Push to '+esc(company.name) +
+          '</label>';
+      }
+    }
     head.innerHTML=(
       '<div class="phase-icon" id="icon-'+p.id+'" style="background:'+p.bg+';color:'+p.tc+'">'+p.label.replace('Phase ','')+'</div>'
       +'<div class="phase-info"><div class="phase-name">'+p.name+'</div><div class="phase-sub">'+p.label+'</div></div>'
       +'<div class="phase-right">'
+      +companyPhaseCheckboxHTML
       +'<span class="phase-readiness" id="readiness-'+p.id+'" onclick="event.stopPropagation();checkPhaseReadiness(\''+p.id+'\')" title="Check readiness for this phase" style="font-size:.72rem;color:var(--faint);cursor:pointer;padding:2px 6px;border-radius:5px;white-space:nowrap;">Check readiness</span>'
       +'<span class="phase-count" id="count-'+p.id+'">0/'+getAllIds(p).length+'</span>'
       +'<svg class="phase-chev" id="chev-'+p.id+'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>'
@@ -3884,6 +4308,77 @@ const DIAGRAMS = {
 };
 
 function buildModalHTML(modalKey,taskId){
+  return buildModalHTMLInner(modalKey,taskId) + buildStepLinksHTML(taskId) + buildCompanyPushHTML(taskId);
+}
+
+function buildCompanyPushHTML(taskId){
+  var proj = getProject(currentProjectId);
+  if(!proj || !proj.companyId) return '';
+  var step = findStepById(taskId);
+  if(!step || COMPANY_PHASE_IDS.indexOf(step.phaseId) < 0) return '';
+  var company = getCompany(proj.companyId);
+  if(!company) return '';
+  return '<div class="modal-section" style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.25rem;">' +
+    '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;">' +
+    '<input type="checkbox" onchange="if(this.checked){ confirmPushStepToCompany(\''+taskId+'\', this); }" style="margin-top:2px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">' +
+    '<span>Update <strong>'+esc(company.name)+'</strong> with this step\'s current content</span>' +
+    '</label>' +
+    '</div>';
+}
+
+var _pendingCompanyPush = null; // {type:'step'|'phase', taskId or phaseId, checkboxEl}
+
+function confirmPushStepToCompany(taskId, checkboxEl){
+  var proj = getProject(currentProjectId);
+  var company = getCompany(proj.companyId);
+  var step = findStepById(taskId);
+  if(!company || !step) return;
+  _pendingCompanyPush = { type: 'step', taskId: taskId, checkboxEl: checkboxEl };
+  document.getElementById('company-push-confirm-message').textContent =
+    'This will permanently overwrite "' + step.title + '" in ' + company.name +
+    ' with what\'s currently in this project, and immediately update every other project using ' + company.name +
+    ' to match. This cannot be undone.';
+  document.getElementById('company-push-confirm-overlay').classList.add('open');
+}
+
+function confirmPushPhaseToCompany(phaseId, checkboxEl){
+  var proj = getProject(currentProjectId);
+  var company = getCompany(proj.companyId);
+  if(!company) return;
+  var phaseName = phaseId === 'p1' ? 'Understand the company' : 'Define your customers';
+  _pendingCompanyPush = { type: 'phase', phaseId: phaseId, checkboxEl: checkboxEl };
+  document.getElementById('company-push-confirm-message').textContent =
+    'This will permanently overwrite every step in "' + phaseName + '" in ' + company.name +
+    ' with what\'s currently in this project, and immediately update every other project using ' + company.name +
+    ' to match. This cannot be undone.';
+  document.getElementById('company-push-confirm-overlay').classList.add('open');
+}
+
+function cancelCompanyPushConfirm(){
+  if(_pendingCompanyPush && _pendingCompanyPush.checkboxEl){
+    _pendingCompanyPush.checkboxEl.checked = false;
+  }
+  _pendingCompanyPush = null;
+  document.getElementById('company-push-confirm-overlay').classList.remove('open');
+}
+
+function executeCompanyPushConfirm(){
+  if(!_pendingCompanyPush) return;
+  var proj = getProject(currentProjectId);
+  if(_pendingCompanyPush.type === 'step'){
+    pushStepToCompany(proj.companyId, _pendingCompanyPush.taskId);
+  } else {
+    pushPhaseToCompany(proj.companyId, _pendingCompanyPush.phaseId);
+  }
+  document.getElementById('company-push-confirm-overlay').classList.remove('open');
+  // Leave the checkbox checked -- it correctly reflects that this step/
+  // phase has now been pushed. _pendingCompanyPush is cleared without
+  // unchecking it (unlike cancel, which resets it).
+  _pendingCompanyPush = null;
+  showSaved();
+}
+
+function buildModalHTMLInner(modalKey,taskId){
   switch(modalKey){
     case 'generic': {
       var v=(getKey('note_'+taskId)||{}).notes||'';
@@ -4296,6 +4791,9 @@ function enterSignedInApp(){
   getEmail.then(function(){
     return loadCustomTemplates();
   }).then(function(){
+    return loadCompanies();
+  }).then(function(){
+    subscribeToCompanyUpdates();
     return sbFetchAllProjects();
   }).then(function(remote){
     if(remote){
@@ -4528,11 +5026,12 @@ function getProjectTemplate(proj){
 }
 
 var _activeDeckTemplate = null; // set by generateDeckClientSide before any slide builder runs
+var _activeDeckData = null; // set by generateDeckClientSide so deckHdr can read per-step links without depending on currentProjectId
 
 var DECK_TXT = DECK_TEMPLATES.myrec.txtColor;
 var DECK_MUT = DECK_TEMPLATES.myrec.mutColor;
 var DECK_COVER_BG_B64 = DECK_TEMPLATES.myrec.coverBgB64;
-function deckHdr(slide, title, sub){
+function deckHdr(slide, title, sub, taskId){
   // Real three-dot decoration from the template's slideLayout3, drawn as
   // actual shapes since PptxGenJS cannot import the template's own XML --
   // same size and position as the genuine template asset. Only drawn for
@@ -4549,6 +5048,25 @@ function deckHdr(slide, title, sub){
     });
   }
   slide.addText(title, { x:titleX, y:0.5, w:titleW, h:0.58, fontFace:tpl.titleFont, fontSize:22.5, color:tpl.accentColor, align:'left', valign:'top' });
+
+  // Included links/attachments render below the title, right-aligned, as
+  // a compact list of clickable labels -- one row per item, real
+  // hyperlinks in the actual download. Read from the module-level
+  // _activeDeckData reference (set once per generateDeckClientSide call)
+  // rather than getKey()/currentProjectId, since this function must work
+  // correctly for whatever project's data was actually passed in, not
+  // necessarily whichever project happens to be open in the UI.
+  if(taskId && _activeDeckData){
+    var allLinks = _activeDeckData['links_'+taskId] || [];
+    var includedLinks = allLinks.filter(function(l){ return l.included; });
+    if(includedLinks.length){
+      var linkText = includedLinks.slice(0,4).map(function(l){
+        return { text: (l.label||l.url), options: { hyperlink: { url: l.url }, color: tpl.accentColor, fontSize: 10.5, breakLine: true } };
+      });
+      slide.addText(linkText, { x:5.6, y:0.5, w:3.9, h:0.5, align:'right', valign:'top', fontFace:tpl.bodyFont });
+    }
+  }
+
   var y0 = 1.45;
   if(sub){
     slide.addText(sub, { x:0.5, y:1.1, w:8.6, h:0.4, fontFace:tpl.bodyFont, fontSize:14, color:DECK_MUT, align:'left' });
@@ -4579,9 +5097,12 @@ function deckFrowFlow(pptx, slide, title, label, val, x, y, w, h){
   // overlap the next row instead of triggering an overflow to a new
   // slide. Estimate the real height from the actual text length so the
   // overflow check (and the row itself) account for genuinely long answers.
-  var CHARS_PER_LINE = Math.max(20, Math.floor(w * 11)); // ~11 chars/inch at 18pt
+  // Calibrated directly against real rendered output at 18pt across an
+  // 8.6in box: roughly 8 characters per inch, not the ~11 first assumed,
+  // which had been letting estimated line counts run noticeably low.
+  var CHARS_PER_LINE = Math.max(14, Math.floor(w * 8));
   var estLines = Math.max(1, Math.ceil(String(val).length / CHARS_PER_LINE));
-  var neededH = Math.max(h, 0.34 + estLines * 0.3);
+  var neededH = Math.max(h, 0.34 + estLines * 0.32);
   if(y + neededH > DECK_SLIDE_MAX_Y){
     slide = pptx.addSlide();
     y = deckHdr(slide, title + ' (continued)');
@@ -4591,26 +5112,61 @@ function deckFrowFlow(pptx, slide, title, label, val, x, y, w, h){
 }
 
 function deckTwoCol(slide, labelL, valL, labelR, valR, y){
-  var lw=4.3, rw=4.3, lx=0.5, rx=5.1, h=1.6;
+  var lw=4.3, rw=4.3, lx=0.5, rx=5.1;
+  // Estimate real height from the longer of the two columns' text, the
+  // same way deckFrowFlow does for single-column rows -- a fixed height
+  // here let long answers in either column run into whatever was placed
+  // below this pair on the slide.
+  var CHARS_PER_LINE = Math.max(10, Math.floor(lw * 8));
+  var estLinesL = valL ? Math.max(1, Math.ceil(String(valL).length / CHARS_PER_LINE)) : 0;
+  var estLinesR = valR ? Math.max(1, Math.ceil(String(valR).length / CHARS_PER_LINE)) : 0;
+  var estLines = Math.max(estLinesL, estLinesR, 1);
+  var h = Math.max(1.6, 0.42 + estLines * 0.32);
   if(valL){
     slide.addText(labelL, { x:lx, y:y, w:lw, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
-    slide.addText(valL, { x:lx, y:y+0.32, w:lw, h:h-0.32, fontFace:'Open Sans Light', fontSize:16, color:DECK_TXT });
+    slide.addText(valL, { x:lx, y:y+0.32, w:lw, h:h-0.32, fontFace:'Open Sans Light', fontSize:16, color:DECK_TXT, valign:'top' });
   }
   if(valR){
     slide.addText(labelR, { x:rx, y:y, w:rw, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
-    slide.addText(valR, { x:rx, y:y+0.32, w:rw, h:h-0.32, fontFace:'Open Sans Light', fontSize:16, color:DECK_TXT });
+    slide.addText(valR, { x:rx, y:y+0.32, w:rw, h:h-0.32, fontFace:'Open Sans Light', fontSize:16, color:DECK_TXT, valign:'top' });
   }
+  return h;
 }
 
-function deckFourQuad(slide, items){
+function deckFourQuad(pptx, slide, title, items){
   var positions = [[0.5,1.5],[5.1,1.5],[0.5,3.45],[5.1,3.45]];
   var qw=4.3, qh=1.75;
+  // Each quadrant is a fixed-size box with nothing to flow into below it,
+  // unlike a sequential row layout -- so a long answer here would silently
+  // overflow its own box instead of pushing later content down. If any
+  // quadrant's estimated content won't fit in qh, the whole matrix falls
+  // back to full-width labeled rows (which already handle arbitrary
+  // length safely) rather than risk a clipped or overlapping grid.
+  var CHARS_PER_LINE = Math.max(10, Math.floor(qw * 8));
+  var maxFitLines = Math.floor((qh - 0.32) / 0.26);
+  var anyTooLong = items.some(function(item){
+    if(!item[1]) return false;
+    var estLines = Math.max(1, Math.ceil(String(item[1]).length / CHARS_PER_LINE));
+    return estLines > maxFitLines;
+  });
+
+  if(anyTooLong){
+    var y = deckHdr(slide, title);
+    items.forEach(function(item){
+      if(!item[1]) return;
+      var r = deckFrowFlow(pptx, slide, title, item[0], item[1], 0.5, y, 8.6, 0.85);
+      slide = r.slide; y = r.y;
+    });
+    return;
+  }
+
+  deckHdr(slide, title);
   items.forEach(function(item, i){
     var label=item[0], val=item[1];
     if(!val) return;
     var pos = positions[i];
     slide.addText(label, { x:pos[0], y:pos[1], w:qw, h:0.3, fontFace:'Open Sans SemiBold', fontSize:13, bold:true, color:DECK_TXT });
-    slide.addText(val, { x:pos[0], y:pos[1]+0.32, w:qw, h:qh-0.32, fontFace:'Open Sans Light', fontSize:14, color:DECK_TXT });
+    slide.addText(val, { x:pos[0], y:pos[1]+0.32, w:qw, h:qh-0.32, fontFace:'Open Sans Light', fontSize:14, color:DECK_TXT, valign:'top' });
   });
 }
 
@@ -4688,8 +5244,8 @@ var DECK_SLIDE_BUILDERS = {
     var slide = pptx.addSlide();
     var y = deckHdr(slide, title);
     if(nps.score){ var r1 = deckFrowFlow(pptx, slide, title, 'NPS SCORE', nps.score, 0.5, y, 8.6, 0.6); slide = r1.slide; y = r1.y; }
-    deckTwoCol(slide, 'PROMOTERS SAY', nps.promoters, 'DETRACTORS SAY', nps.detractors, y);
-    y += 1.7;
+    var usedH = deckTwoCol(slide, 'PROMOTERS SAY', nps.promoters, 'DETRACTORS SAY', nps.detractors, y);
+    y += usedH + 0.18;
     if(nps.actions){ var r2 = deckFrowFlow(pptx, slide, title, 'ACTION ITEMS', nps.actions, 0.5, y, 8.6, 0.85); slide = r2.slide; y = r2.y; }
     return true;
   },
@@ -4698,8 +5254,7 @@ var DECK_SLIDE_BUILDERS = {
     var sw = data.swot || {};
     if(!(sw.s||sw.w||sw.o||sw.t)) return false;
     var slide = pptx.addSlide();
-    deckHdr(slide, title);
-    deckFourQuad(slide, [['STRENGTHS',sw.s],['WEAKNESSES',sw.w],['OPPORTUNITIES',sw.o],['THREATS',sw.t]]);
+    deckFourQuad(pptx, slide, title, [['STRENGTHS',sw.s],['WEAKNESSES',sw.w],['OPPORTUNITIES',sw.o],['THREATS',sw.t]]);
     return true;
   },
 
@@ -4707,8 +5262,7 @@ var DECK_SLIDE_BUILDERS = {
     var roi = data.roi || {};
     if(!(roi.tl||roi.tr||roi.bl||roi.br)) return false;
     var slide = pptx.addSlide();
-    deckHdr(slide, title);
-    deckFourQuad(slide, [
+    deckFourQuad(pptx, slide, title, [
       ['DO FIRST (low effort, high value)', roi.tl], ['PLAN CAREFULLY (high effort, high value)', roi.tr],
       ['FILL-IN WORK (low effort, low value)', roi.bl], ['AVOID (high effort, low value)', roi.br]
     ]);
@@ -4729,13 +5283,30 @@ var DECK_SLIDE_BUILDERS = {
   vpc: function(pptx, title, data){
     var vpc = data.vpc || {};
     if(!(vpc.products||vpc.jobs||vpc.pains||vpc.gains)) return false;
-    var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var slide = null;
+    var y = 0;
     [['PRODUCTS & SERVICES',vpc.products,'CUSTOMER JOBS',vpc.jobs],
      ['GAIN CREATORS',vpc.gaincreat,'GAINS',vpc.gains],
      ['PAIN RELIEVERS',vpc.painrel,'PAINS',vpc.pains]].forEach(function(row){
-      deckTwoCol(slide, row[0], row[1], row[2], row[3], y);
-      y += 1.2;
+      if(!row[1] && !row[3]) return;
+      // Estimate this row's real height before committing to the current
+      // slide, the same way as the rest of this row pair's content does,
+      // so a long answer can't run into the row below it.
+      var CHARS_PER_LINE = Math.max(10, Math.floor(4.3 * 8));
+      var estLinesL = row[1] ? Math.max(1, Math.ceil(String(row[1]).length / CHARS_PER_LINE)) : 0;
+      var estLinesR = row[3] ? Math.max(1, Math.ceil(String(row[3]).length / CHARS_PER_LINE)) : 0;
+      var estRowH = Math.max(1.2, 0.42 + Math.max(estLinesL, estLinesR, 1) * 0.3);
+      if(!slide){
+        // First row being written -- create the slide now, not before
+        // we knew whether this row would actually fit on it.
+        slide = pptx.addSlide();
+        y = deckHdr(slide, title);
+      } else if(y + estRowH > DECK_SLIDE_MAX_Y){
+        slide = pptx.addSlide();
+        y = deckHdr(slide, title + ' (continued)');
+      }
+      var usedH = deckTwoCol(slide, row[0], row[1], row[2], row[3], y);
+      y += usedH + 0.18;
     });
     return true;
   },
@@ -4880,17 +5451,35 @@ var DECK_SLIDE_BUILDERS = {
   backlog: function(pptx, title, data){
     var bl = data.backlog || {};
     if(!bl.top5) return false;
-    var slide = pptx.addSlide();
-    var y0 = deckHdr(slide, title);
-    slide.addText('TOP PRIORITY CRs', { x:0.5, y:y0, w:4.0, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
+    // Bulleted lists at this font size fit roughly 12 lines in the 3.6in
+    // box; more than that would run past the bottom of the slide, so
+    // overflow lines move to a continuation slide rather than being
+    // silently clipped.
+    var MAX_LINES_PER_BOX = 12;
     var top5Lines = bl.top5.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-    slide.addText(deckBulletText(top5Lines, 15), { x:0.5, y:y0+0.32, w:4.3, h:3.6, valign:'top' });
-    if(bl.icebox){
-      slide.addText('ICEBOX', { x:5.1, y:y0, w:3.5, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
-      var iceLines = bl.icebox.split('\n').map(function(l){return l.trim().replace(/^-/,'').trim();}).filter(Boolean);
-      slide.addText(deckBulletText(iceLines, 14), { x:5.1, y:y0+0.32, w:3.5, h:3.6, valign:'top', color:DECK_MUT });
+    var iceLines = bl.icebox ? bl.icebox.split('\n').map(function(l){return l.trim().replace(/^-/,'').trim();}).filter(Boolean) : [];
+
+    function renderBacklogSlide(pageTitle, top5Page, icePage){
+      var slide = pptx.addSlide();
+      var y0 = deckHdr(slide, pageTitle);
+      if(top5Page.length){
+        slide.addText('TOP PRIORITY CRs', { x:0.5, y:y0, w:4.0, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
+        slide.addText(deckBulletText(top5Page, 15), { x:0.5, y:y0+0.32, w:4.3, h:3.6, valign:'top' });
+      }
+      if(icePage.length){
+        slide.addText('ICEBOX', { x:5.1, y:y0, w:3.5, h:0.3, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
+        slide.addText(deckBulletText(icePage, 14), { x:5.1, y:y0+0.32, w:3.5, h:3.6, valign:'top', color:DECK_MUT });
+      }
     }
-    return true;
+
+    var maxRows = Math.max(top5Lines.length, iceLines.length);
+    var pageCount = Math.max(1, Math.ceil(maxRows / MAX_LINES_PER_BOX));
+    for(var p = 0; p < pageCount; p++){
+      var top5Page = top5Lines.slice(p*MAX_LINES_PER_BOX, (p+1)*MAX_LINES_PER_BOX);
+      var icePage = iceLines.slice(p*MAX_LINES_PER_BOX, (p+1)*MAX_LINES_PER_BOX);
+      renderBacklogSlide(p === 0 ? title : title + ' (continued)', top5Page, icePage);
+    }
+    return pageCount;
   },
 
   scoring: function(pptx, title, data){
@@ -4924,14 +5513,26 @@ var DECK_SLIDE_BUILDERS = {
     var nxt = rows.filter(function(r){return r.bucket==='next';}).map(function(r){return r.name;});
     var lat = rows.filter(function(r){return r.bucket==='later';}).map(function(r){return r.name;});
     if(!(now.length||nxt.length||lat.length)) return false;
-    var slide = pptx.addSlide();
-    var y0 = deckHdr(slide, title);
-    [['NOW ('+now.length+')',now],['NEXT ('+nxt.length+')',nxt],['LATER ('+lat.length+')',lat]].forEach(function(col, i){
-      var x = 0.5 + i*2.9;
-      slide.addText(col[0], { x:x, y:y0, w:2.7, h:0.32, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
-      slide.addText(deckBulletText(col[1], 14), { x:x, y:y0+0.36, w:2.7, h:3.4, valign:'top' });
-    });
-    return true;
+    // Bullet lists at this size fit roughly 11 lines in the 3.4in column;
+    // more than that per bucket runs past the bottom of the slide, so
+    // overflow items move to a continuation slide instead.
+    var MAX_LINES_PER_COL = 11;
+    var maxRows = Math.max(now.length, nxt.length, lat.length);
+    var pageCount = Math.max(1, Math.ceil(maxRows / MAX_LINES_PER_COL));
+    for(var p = 0; p < pageCount; p++){
+      var slide = pptx.addSlide();
+      var y0 = deckHdr(slide, p === 0 ? title : title + ' (continued)');
+      var nowPage = now.slice(p*MAX_LINES_PER_COL, (p+1)*MAX_LINES_PER_COL);
+      var nxtPage = nxt.slice(p*MAX_LINES_PER_COL, (p+1)*MAX_LINES_PER_COL);
+      var latPage = lat.slice(p*MAX_LINES_PER_COL, (p+1)*MAX_LINES_PER_COL);
+      [['NOW ('+now.length+')',nowPage],['NEXT ('+nxt.length+')',nxtPage],['LATER ('+lat.length+')',latPage]].forEach(function(col, i){
+        if(!col[1].length) return;
+        var x = 0.5 + i*2.9;
+        slide.addText(col[0], { x:x, y:y0, w:2.7, h:0.32, fontFace:'Open Sans SemiBold', fontSize:14, bold:true, color:DECK_TXT });
+        slide.addText(deckBulletText(col[1], 14), { x:x, y:y0+0.36, w:2.7, h:3.4, valign:'top' });
+      });
+    }
+    return pageCount;
   },
 
   engbalance: function(pptx, title, data){
@@ -5040,6 +5641,7 @@ function generateDeckClientSide(projectName, payload, templateId){
   pptx.addSlide = function(){ realSlideCount++; return _origAddSlide.apply(pptx, arguments); };
 
   var data = (payload && payload.data) || {};
+  _activeDeckData = data;
   var tasks = (payload && payload.tasks) || [];
 
   // Cover slide -- real MyRec template background image, white text,
