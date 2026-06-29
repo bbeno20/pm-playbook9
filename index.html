@@ -3054,10 +3054,17 @@ function sbUpsertProject(proj){
 }
 
 function sbDeleteProject(id){
-  if(!_sbReady) return Promise.resolve();
+  if(!_sbReady) return Promise.resolve({ ok: true, offline: true });
   return _sb.from('pm_projects').delete().eq('id', id).then(function(res){
-    if(res.error) console.warn('Supabase delete failed:', res.error.message);
-  }).catch(function(){});
+    if(res.error){
+      console.warn('Supabase delete failed:', res.error.message);
+      return { ok: false, error: res.error.message };
+    }
+    return { ok: true };
+  }).catch(function(e){
+    console.warn('Supabase delete request failed:', e && e.message);
+    return { ok: false, error: (e && e.message) || 'Network error' };
+  });
 }
 
 function loadApp(){
@@ -3451,9 +3458,21 @@ function deleteCurrentProject(){
   if(!confirm('Delete "'+( proj.name||'Untitled')+'\"? Cannot be undone.')) return;
   var app=loadApp();
   var idToDelete=currentProjectId;
+  var savedCopy = app.projects[idToDelete];
   delete app.projects[idToDelete];
   saveApp(app);
-  sbDeleteProject(idToDelete).then(function(){
+  sbDeleteProject(idToDelete).then(function(result){
+    if(result && result.ok === false){
+      // The cloud delete genuinely failed -- put the project back locally
+      // rather than letting the user believe it's gone when it isn't,
+      // since that mismatch is exactly what made deletes look like they
+      // "didn't stick" after a refresh.
+      var app2 = loadApp();
+      app2.projects[idToDelete] = savedCopy;
+      saveApp(app2);
+      alert('Could not delete this project: ' + (result.error || 'unknown error') + '. It has not been removed -- please try again.');
+      return;
+    }
     goHome();
   });
 }
@@ -3549,8 +3568,18 @@ function cancelCardDelete(id){
   document.getElementById('delconfirm-'+id).style.display='none';
 }
 function doCardDelete(id){
-  var app=loadApp(); delete app.projects[id]; saveApp(app); renderHome();
-  sbDeleteProject(id);
+  var app=loadApp();
+  var savedCopy = app.projects[id];
+  delete app.projects[id]; saveApp(app); renderHome();
+  sbDeleteProject(id).then(function(result){
+    if(result && result.ok === false){
+      var app2 = loadApp();
+      app2.projects[id] = savedCopy;
+      saveApp(app2);
+      renderHome();
+      alert('Could not delete this project: ' + (result.error || 'unknown error') + '. It has not been removed -- please try again.');
+    }
+  });
 }
 
 // -- CHECKLIST --------------------------------------------------------------
