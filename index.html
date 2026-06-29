@@ -3466,8 +3466,10 @@ function deleteCurrentProject(){
   var app=loadApp();
   var idToDelete=currentProjectId;
   var savedCopy = app.projects[idToDelete];
+  var wasMyRecSeed = savedCopy && savedCopy.phaseSet === 'myrec';
   delete app.projects[idToDelete];
   saveApp(app);
+  if(wasMyRecSeed) lsSet('pm_myrec_seed_deleted', '1');
   sbDeleteProject(idToDelete).then(function(result){
     if(result && result.ok === false){
       // The cloud delete genuinely failed -- put the project back locally
@@ -3477,6 +3479,7 @@ function deleteCurrentProject(){
       var app2 = loadApp();
       app2.projects[idToDelete] = savedCopy;
       saveApp(app2);
+      if(wasMyRecSeed) lsSet('pm_myrec_seed_deleted', '0');
       alert('Could not delete this project: ' + (result.error || 'unknown error') + '. It has not been removed -- please try again.');
       return;
     }
@@ -3577,12 +3580,15 @@ function cancelCardDelete(id){
 function doCardDelete(id){
   var app=loadApp();
   var savedCopy = app.projects[id];
+  var wasMyRecSeed = savedCopy && savedCopy.phaseSet === 'myrec';
   delete app.projects[id]; saveApp(app); renderHome();
+  if(wasMyRecSeed) lsSet('pm_myrec_seed_deleted', '1');
   sbDeleteProject(id).then(function(result){
     if(result && result.ok === false){
       var app2 = loadApp();
       app2.projects[id] = savedCopy;
       saveApp(app2);
+      if(wasMyRecSeed) lsSet('pm_myrec_seed_deleted', '0');
       renderHome();
       alert('Could not delete this project: ' + (result.error || 'unknown error') + '. It has not been removed -- please try again.');
     }
@@ -4268,7 +4274,8 @@ function generatePptx(){
 function seedAndRender(){
   var app=loadApp();
   var hasMyRec=Object.values(app.projects||{}).some(function(p){return p.phaseSet==='myrec';});
-  if(!hasMyRec){
+  var userDeletedMyRecSeed = lsGet('pm_myrec_seed_deleted') === '1';
+  if(!hasMyRec && !userDeletedMyRecSeed){
     var id='proj_myrec_'+Date.now();
     app.projects[id]={id:id,name:'MyRec Public Side Enhancements',phaseSet:'myrec',
       checks:{},data:Object.assign({},MYREC_SEED),created:Date.now(),updated:Date.now()};
