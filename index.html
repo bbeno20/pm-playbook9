@@ -2596,7 +2596,7 @@ function exportAllData(){
 
 var PREVIEW_MAX_ROWS_HEIGHT_EM = 19.5; // matches the real deck's usable body height, in body-text em units
 
-function previewBuildSlideHTMLPages(title, tpl, rowSpecs){
+function previewBuildSlideHTMLPages(title, tpl, rowSpecs, taskId){
   // rowSpecs: [{label, val}], already filtered to non-empty values.
   // Splits rows across multiple slide pages using the same line-count
   // estimate as the real .pptx generator, so the live preview's slide
@@ -2612,11 +2612,24 @@ function previewBuildSlideHTMLPages(title, tpl, rowSpecs){
     return '<div style="margin-bottom:.8em;"><div style="font-size:.69em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#'+tpl.txtColor+';margin-bottom:.12em;">'+esc(label)+'</div><div style="font-size:.875em;color:#'+tpl.txtColor+';line-height:1.45;">'+esc(val)+'</div></div>';
   }
 
-  function wrapPage(pageTitle, rowsHTML){
+  var includedLinks = taskId ? (getStepLinks(taskId) || []).filter(function(l){ return l.included; }) : [];
+  function linksHTML(){
+    if(!includedLinks.length) return '';
+    return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.18em;flex-shrink:0;">' +
+      includedLinks.slice(0,4).map(function(l){
+        return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener" style="font-size:.69em;color:#'+tpl.accentColor+';text-decoration:none;max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(l.label||l.url)+'</a>';
+      }).join('') +
+      '</div>';
+  }
+
+  function wrapPage(pageTitle, rowsHTML, isFirstPage){
     return '<div class="preview-slide" style="padding:1.625em;box-sizing:border-box;">' +
-      '<div style="display:flex;align-items:center;gap:.375em;margin-bottom:.875em;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1em;margin-bottom:.875em;">' +
+      '<div style="display:flex;align-items:center;gap:.375em;min-width:0;">' +
       dotsHTML +
-      '<span style="font-size:1.125em;font-weight:600;color:#'+tpl.accentColor+';font-family:inherit;margin-left:'+(tpl.showDots?'.375em':'0')+';">'+esc(pageTitle)+'</span>' +
+      '<span style="font-size:1.125em;font-weight:600;color:#'+tpl.accentColor+';font-family:inherit;margin-left:'+(tpl.showDots?'.375em':'0')+';white-space:nowrap;">'+esc(pageTitle)+'</span>' +
+      '</div>' +
+      (isFirstPage ? linksHTML() : '') +
       '</div>' +
       rowsHTML +
       '</div>';
@@ -2644,7 +2657,7 @@ function previewBuildSlideHTMLPages(title, tpl, rowSpecs){
   if(!pages.length) return [];
 
   return pages.map(function(rowsHTML, i){
-    return wrapPage(i === 0 ? title : title + ' (continued)', rowsHTML);
+    return wrapPage(i === 0 ? title : title + ' (continued)', rowsHTML, i === 0);
   });
 }
 
@@ -2679,7 +2692,7 @@ function previewSlideHTML(title, modal, data, taskId, templateId){
   }
 
   if(!rowSpecs.length) return [];
-  return previewBuildSlideHTMLPages(title, tpl, rowSpecs);
+  return previewBuildSlideHTMLPages(title, tpl, rowSpecs, taskId);
 }
 
 var previewSlideList = []; // [{html, title}] for the current project, in deck order
@@ -3420,7 +3433,12 @@ function stepLinkRowHTML(taskId, item, i){
   return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">' +
     '<input type="checkbox" '+(item.included?'checked':'')+' onchange="toggleStepLinkIncluded(\''+taskId+'\','+i+',this.checked)" title="Show in slide deck and preview" style="accent-color:var(--accent);cursor:pointer;flex-shrink:0;">' +
     '<span style="color:var(--faint);flex-shrink:0;">'+icon+'</span>' +
-    '<a href="'+esc(item.url)+'" target="_blank" rel="noopener" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text);text-decoration:none;border-bottom:1px dotted var(--border-strong);">'+esc(item.label||item.url)+'</a>' +
+    '<input type="text" value="'+esc(item.label||item.url)+'" title="'+esc(item.url)+'" placeholder="Display name" ' +
+    'onchange="renameStepLink(\''+taskId+'\','+i+',this.value)" onclick="event.stopPropagation();" ' +
+    'style="flex:1;min-width:0;font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dotted var(--border-strong);padding:1px 0;font-family:inherit;outline:none;">' +
+    '<a href="'+esc(item.url)+'" target="_blank" rel="noopener" title="Open" style="color:var(--faint);flex-shrink:0;display:flex;">' +
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+    '</a>' +
     '<button onclick="removeStepLink(\''+taskId+'\','+i+')" style="background:none;border:none;color:var(--faint);cursor:pointer;padding:2px;flex-shrink:0;" title="Remove">&#x2715;</button>' +
     '</div>';
 }
@@ -3498,6 +3516,17 @@ function removeStepLink(taskId, index){
   links.splice(index, 1);
   saveStepLinks(taskId, links);
   rerenderStepLinks(taskId);
+  refreshSlidePreview();
+}
+
+function renameStepLink(taskId, index, newLabel){
+  var links = getStepLinks(taskId);
+  if(!links[index]) return;
+  var trimmed = (newLabel || '').trim();
+  // An empty name falls back to the URL/filename rather than saving a
+  // blank label that would show as nothing in the deck/preview.
+  links[index].label = trimmed || links[index].url;
+  saveStepLinks(taskId, links);
   refreshSlidePreview();
 }
 
@@ -3900,6 +3929,67 @@ function getAllIds(p){
   if(p.sections) return p.sections.reduce(function(a,s){return a.concat(s.tasks.map(function(t){return t.id;}));}, []);
   return p.tasks.map(function(t){return t.id;});
 }
+
+function getPhaseIncludeState(p){
+  // 'all' (every step included) or 'none' -- this is intentionally a
+  // strict, binary check: the phase box is only ever checked when every
+  // single step's own flag is true, full stop. Steps are still counted
+  // even if they currently have no content, because otherwise a phase
+  // with mostly-empty steps could look "fully included" the moment just
+  // one filled-in step got re-checked, while its other steps stayed off.
+  var proj = getProject(currentProjectId);
+  var data = proj.data || {};
+  var ids = getAllIds(p);
+  if(!ids.length) return 'all';
+  var allIn = ids.every(function(taskId){ return isStepIncludedInDeck(taskId, data); });
+  return allIn ? 'all' : 'not-all';
+}
+
+function deckHasDataIgnoringInclude(modal, taskId, data){
+  // Same content check deckHasData does, without the inclusion-flag gate --
+  // used to figure out the phase checkbox's REAL state, since that state
+  // is itself the thing the inclusion flag controls.
+  if(DECK_NOTES_MODALS.indexOf(modal) >= 0){
+    var nd = data['note_'+taskId] || {};
+    return !!(nd.notes && String(nd.notes).trim());
+  }
+  var d = data[modal];
+  if(d && typeof d === 'object' && !Array.isArray(d)){
+    return Object.keys(d).some(function(k){ return d[k] && String(d[k]).trim(); });
+  }
+  if(Array.isArray(d)) return d.length > 0;
+  return !!d;
+}
+
+function togglePhaseIncludedInDeck(phaseId, checked){
+  var phase = (currentPhases||PHASES).find(function(p){ return p.id === phaseId; });
+  if(!phase) return;
+  // Delegate each step to the same single function the row/modal
+  // checkboxes use, so there is only ever one place that actually sets
+  // the flag and keeps the row/modal checkboxes in sync.
+  getAllIds(phase).forEach(function(taskId){
+    setKey('stepIncluded_'+taskId, checked);
+    var rowCb = document.getElementById('row-include-checkbox-'+taskId);
+    if(rowCb) rowCb.checked = checked;
+    var modalCb = document.getElementById('step-include-checkbox-'+taskId);
+    if(modalCb) modalCb.checked = checked;
+  });
+  syncPhaseIncludeCheckbox(phaseId);
+  refreshSlidePreview();
+}
+
+function syncPhaseIncludeCheckbox(phaseId){
+  var src = currentPhases || PHASES;
+  var phases = phaseId ? src.filter(function(p){ return p.id === phaseId; }) : src;
+  phases.forEach(function(p){
+    var cb = document.getElementById('phase-include-checkbox-'+p.id);
+    if(!cb) return;
+    var state = getPhaseIncludeState(p);
+    cb.checked = (state === 'all');
+    cb.style.opacity = '1';
+  });
+}
+
 function getAllTaskIds(){
   var src=currentPhases||PHASES;
   var ids=[];
@@ -4086,11 +4176,20 @@ function buildTaskEl(t){
   txt.className='task-text';txt.style.cursor='pointer';
   txt.innerHTML='<div class="task-title">'+t.title+'</div><div class="task-desc">'+t.desc+'</div>';
   txt.onclick=function(){openModal(t.id,t.modal||'generic');};
+  var includeLabel=document.createElement('label');
+  includeLabel.title="Show this step's data in the slide deck and preview";
+  includeLabel.style.cssText='display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--faint);cursor:pointer;white-space:nowrap;flex-shrink:0;margin:0 6px;';
+  var proj=getProject(currentProjectId);
+  var includeChecked=isStepIncludedInDeck(t.id, (proj&&proj.data)||{});
+  includeLabel.innerHTML='<input type="checkbox" id="row-include-checkbox-'+t.id+'" '+(includeChecked?'checked':'')+' style="accent-color:var(--accent);cursor:pointer;">In deck';
+  includeLabel.onclick=function(e){ e.stopPropagation(); };
+  var includeCb=includeLabel.querySelector('input');
+  includeCb.onchange=function(e){ e.stopPropagation(); toggleStepIncludedInDeck(t.id, includeCb.checked); };
   var btn=document.createElement('button');
   btn.className='open-btn';btn.title='Open workspace';
   btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
   btn.onclick=function(){openModal(t.id,t.modal||'generic');};
-  div.appendChild(cb);div.appendChild(txt);div.appendChild(btn);
+  div.appendChild(cb);div.appendChild(txt);div.appendChild(includeLabel);div.appendChild(btn);
   return div;
 }
 
@@ -4119,10 +4218,16 @@ function buildPhasesUI(){
           '</label>';
       }
     }
+    var phaseIncludeState = getPhaseIncludeState(p);
+    var phaseIncludeCheckboxHTML = '<label onclick="event.stopPropagation();" title="Show every step in this phase in the slide deck and preview" style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--faint);cursor:pointer;white-space:nowrap;">' +
+      '<input type="checkbox" id="phase-include-checkbox-'+p.id+'" '+(phaseIncludeState==='all'?'checked':'')+' onclick="event.stopPropagation();" onchange="togglePhaseIncludedInDeck(\''+p.id+'\', this.checked)" style="accent-color:var(--accent);cursor:pointer;" title="'+(phaseIncludeState==='all'?'Show this phase in the slide deck and preview':'One or more steps in this phase are hidden from the deck')+'">' +
+      'In deck' +
+      '</label>';
     head.innerHTML=(
       '<div class="phase-icon" id="icon-'+p.id+'" style="background:'+p.bg+';color:'+p.tc+'">'+p.label.replace('Phase ','')+'</div>'
       +'<div class="phase-info"><div class="phase-name">'+p.name+'</div><div class="phase-sub">'+p.label+'</div></div>'
       +'<div class="phase-right">'
+      +phaseIncludeCheckboxHTML
       +companyPhaseCheckboxHTML
       +'<span class="phase-readiness" id="readiness-'+p.id+'" onclick="event.stopPropagation();checkPhaseReadiness(\''+p.id+'\')" title="Check readiness for this phase" style="font-size:.72rem;color:var(--faint);cursor:pointer;padding:2px 6px;border-radius:5px;white-space:nowrap;">Check readiness</span>'
       +'<span class="phase-count" id="count-'+p.id+'">0/'+getAllIds(p).length+'</span>'
@@ -4308,7 +4413,33 @@ const DIAGRAMS = {
 };
 
 function buildModalHTML(modalKey,taskId){
-  return buildModalHTMLInner(modalKey,taskId) + buildStepLinksHTML(taskId) + buildCompanyPushHTML(taskId);
+  return buildStepIncludeHTML(taskId) + buildModalHTMLInner(modalKey,taskId) + buildStepLinksHTML(taskId) + buildCompanyPushHTML(taskId);
+}
+
+function buildStepIncludeHTML(taskId){
+  var proj = getProject(currentProjectId);
+  var data = proj.data || {};
+  var checked = isStepIncludedInDeck(taskId, data);
+  return '<div class="modal-section" style="border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem;">' +
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">' +
+    '<input type="checkbox" id="step-include-checkbox-'+taskId+'" '+(checked?'checked':'')+' onchange="toggleStepIncludedInDeck(\''+taskId+'\', this.checked)" style="accent-color:var(--accent);cursor:pointer;flex-shrink:0;">' +
+    '<span>Show this step\'s data in the slide deck and preview</span>' +
+    '</label>' +
+    '</div>';
+}
+
+function toggleStepIncludedInDeck(taskId, checked){
+  setKey('stepIncluded_'+taskId, checked);
+  // Three different places can show this same flag -- the row checkbox on
+  // the project page, the one inside the step's modal (if open), and the
+  // phase-level checkbox. Whichever one triggered this change, keep the
+  // other two correct rather than letting them silently go stale.
+  var rowCb = document.getElementById('row-include-checkbox-'+taskId);
+  if(rowCb) rowCb.checked = checked;
+  var modalCb = document.getElementById('step-include-checkbox-'+taskId);
+  if(modalCb) modalCb.checked = checked;
+  syncPhaseIncludeCheckbox(); // a phase's own checkbox may need to update to reflect mixed/all/none state
+  refreshSlidePreview();
 }
 
 function buildCompanyPushHTML(taskId){
@@ -5151,7 +5282,7 @@ function deckFourQuad(pptx, slide, title, items){
   });
 
   if(anyTooLong){
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     items.forEach(function(item){
       if(!item[1]) return;
       var r = deckFrowFlow(pptx, slide, title, item[0], item[1], 0.5, y, 8.6, 0.85);
@@ -5160,7 +5291,7 @@ function deckFourQuad(pptx, slide, title, items){
     return;
   }
 
-  deckHdr(slide, title);
+  deckHdr(slide, title, null, taskId);
   items.forEach(function(item, i){
     var label=item[0], val=item[1];
     if(!val) return;
@@ -5205,44 +5336,44 @@ var DECK_SLIDE_BUILDERS = {
     return chunks.length;
   },
 
-  why: function(pptx, title, data){
+  why: function(pptx, title, data, taskId){
     var why = data.why || {};
     if(!(why.why||why.how||why.what)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['WHY',why.why],['HOW',why.how],['WHAT',why.what]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 1.0); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  fivec: function(pptx, title, data){
+  fivec: function(pptx, title, data, taskId){
     var fc = data.fivec || {};
     if(!(fc.company||fc.customers||fc.competitors)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['COMPANY',fc.company],['CUSTOMERS',fc.customers],['COLLABORATORS',fc.collaborators],['COMPETITORS',fc.competitors],['CLIMATE',fc.climate]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  persona: function(pptx, title, data){
+  persona: function(pptx, title, data, taskId){
     var per = data.persona || {};
     if(!(per.name||per.goals||per.pains)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title, per.name||'');
+    var y = deckHdr(slide, title, per.name||'', taskId);
     [['GOALS',per.goals],['KEY PAINS',per.pains],['SUCCESS',per.success],['CONTEXT',per.context]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.85); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  nps: function(pptx, title, data){
+  nps: function(pptx, title, data, taskId){
     var nps = data.nps || {};
     if(!(nps.score||nps.promoters||nps.detractors)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     if(nps.score){ var r1 = deckFrowFlow(pptx, slide, title, 'NPS SCORE', nps.score, 0.5, y, 8.6, 0.6); slide = r1.slide; y = r1.y; }
     var usedH = deckTwoCol(slide, 'PROMOTERS SAY', nps.promoters, 'DETRACTORS SAY', nps.detractors, y);
     y += usedH + 0.18;
@@ -5250,7 +5381,7 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  swot: function(pptx, title, data){
+  swot: function(pptx, title, data, taskId){
     var sw = data.swot || {};
     if(!(sw.s||sw.w||sw.o||sw.t)) return false;
     var slide = pptx.addSlide();
@@ -5258,7 +5389,7 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  roi: function(pptx, title, data){
+  roi: function(pptx, title, data, taskId){
     var roi = data.roi || {};
     if(!(roi.tl||roi.tr||roi.bl||roi.br)) return false;
     var slide = pptx.addSlide();
@@ -5269,18 +5400,18 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  journey: function(pptx, title, data){
+  journey: function(pptx, title, data, taskId){
     var jn = data.journey || {};
     if(!(jn.current||jn.steps||jn.desired)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['CURRENT STATE',jn.current],['JOURNEY STEPS',jn.steps],['MOTIVATIONS',jn.motivations],['HINDRANCES',jn.hindrances],['DESIRED STATE',jn.desired]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  vpc: function(pptx, title, data){
+  vpc: function(pptx, title, data, taskId){
     var vpc = data.vpc || {};
     if(!(vpc.products||vpc.jobs||vpc.pains||vpc.gains)) return false;
     var slide = null;
@@ -5300,7 +5431,7 @@ var DECK_SLIDE_BUILDERS = {
         // First row being written -- create the slide now, not before
         // we knew whether this row would actually fit on it.
         slide = pptx.addSlide();
-        y = deckHdr(slide, title);
+        y = deckHdr(slide, title, null, taskId);
       } else if(y + estRowH > DECK_SLIDE_MAX_Y){
         slide = pptx.addSlide();
         y = deckHdr(slide, title + ' (continued)');
@@ -5311,11 +5442,11 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  bmc: function(pptx, title, data){
+  bmc: function(pptx, title, data, taskId){
     var bmc = data.bmc || {};
     if(!(bmc.value||bmc.segments||bmc.revenue)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['VALUE PROPOSITIONS',bmc.value],['CUSTOMER SEGMENTS',bmc.segments],['CHANNELS',bmc.channels],
      ['CUSTOMER RELATIONSHIPS',bmc.relationships],['KEY ACTIVITIES',bmc.activities],['KEY RESOURCES',bmc.resources],
      ['REVENUE STREAMS',bmc.revenue],['COST STRUCTURE',bmc.costs]].forEach(function(pair){
@@ -5324,22 +5455,22 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  aarrr: function(pptx, title, data){
+  aarrr: function(pptx, title, data, taskId){
     var aa = data.aarrr || {};
     if(!(aa.acquisition||aa.activation||aa.retention)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['ACQUISITION',aa.acquisition],['ACTIVATION',aa.activation],['RETENTION',aa.retention],['REFERRAL',aa.referral],['REVENUE',aa.revenue]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  pressrelease: function(pptx, title, data){
+  pressrelease: function(pptx, title, data, taskId){
     var pr = data.pressrelease || {};
     if(!(pr.headline||pr.summary||pr.problem)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['HEADLINE',pr.headline],['SUMMARY',pr.summary],['PROBLEM',pr.problem],['SOLUTION',pr.solution],
      ['PM QUOTE',pr.pmquote],['CUSTOMER QUOTE',pr.custquote],['CALL TO ACTION',pr.cta]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
@@ -5347,33 +5478,33 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  productreview: function(pptx, title, data){
+  productreview: function(pptx, title, data, taskId){
     var pr = data.productreview || {};
     if(!(pr.focus||pr.differentiation||pr.conclusion)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['REVIEWER FOCUS',pr.focus],['TRADE-OFFS',pr.tradeoffs],['DIFFERENTIATION',pr.differentiation],['REVIEWER CONCLUSION',pr.conclusion]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.9); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  mvpdefine: function(pptx, title, data){
+  mvpdefine: function(pptx, title, data, taskId){
     var mv = data.mvpdefine || {};
     if(!(mv.goal||mv.features)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['MVP GOAL',mv.goal],['IN SCOPE',mv.features],['OUT OF SCOPE',mv.cuts],['DELIGHTERS TO PROTECT',mv.delighters]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  prd: function(pptx, title, data){
+  prd: function(pptx, title, data, taskId){
     var prd = data.prd || {};
     if(!(prd.overview||prd.objectives||prd.metrics)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title, prd.title||'');
+    var y = deckHdr(slide, title, prd.title||'', taskId);
     [['OVERVIEW',prd.overview],['OBJECTIVES',prd.objectives],['SUCCESS METRICS',prd.metrics],['MESSAGING',prd.messaging],
      ['TIMELINE',prd.timeline],['FEATURES IN',prd.featuresin],['FEATURES OUT',prd.featuresout],['OPEN ISSUES',prd.issues]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
@@ -5381,11 +5512,11 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  simplifiedprd: function(pptx, title, data){
+  simplifiedprd: function(pptx, title, data, taskId){
     var sp = data.simplifiedprd || {};
     if(!(sp.vision||sp.pressrelease||sp.functional)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title, 'Simplified PRD');
+    var y = deckHdr(slide, title, 'Simplified PRD', taskId);
     [['VISION',sp.vision],['PRESS RELEASE',sp.pressrelease],['USER STORIES',sp.stories],['SCREENS TO BUILD',sp.screens],
      ['FUNCTIONAL REQUIREMENTS',sp.functional],['SMART BEHAVIORS',sp.behaviors],['TECHNICAL CONSTRAINTS',sp.constraints],['DECISION LOG',sp.decisions]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.6); slide = r.slide; y = r.y;
@@ -5393,62 +5524,62 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  moscow: function(pptx, title, data){
+  moscow: function(pptx, title, data, taskId){
     var mc = data.moscow || {};
     if(!(mc.must||mc.should||mc.could||mc.wont)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['MUST HAVE',mc.must],['SHOULD HAVE',mc.should],['COULD HAVE',mc.could],['WILL NOT HAVE (NOW)',mc.wont]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  userscenarios: function(pptx, title, data){
+  userscenarios: function(pptx, title, data, taskId){
     var us = data.userscenarios || {};
     if(!(us.s1||us.s2||us.s3)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['SCENARIO 1',us.s1],['SCENARIO 2',us.s2],['SCENARIO 3',us.s3]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 1.2); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  designbrief: function(pptx, title, data){
+  designbrief: function(pptx, title, data, taskId){
     var db = data.designbrief || {};
     if(!(db.goal||db.constraints)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['UX GOAL',db.goal],['CONSTRAINTS',db.constraints],['PRIMARY PERSONA',db.persona],['SUCCESS CRITERIA',db.success]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  usabilitytesting: function(pptx, title, data){
+  usabilitytesting: function(pptx, title, data, taskId){
     var ut = data.usabilitytesting || {};
     if(!(ut.results||ut.friction)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['TASKS GIVEN',ut.tasks],['SUCCESS RATE',ut.results],['KEY FRICTION POINTS',ut.friction],['DESIGN CHANGES',ut.changes]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.85); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  designsprint: function(pptx, title, data){
+  designsprint: function(pptx, title, data, taskId){
     var ds = data.designsprint || {};
     if(!(ds.challenge||ds.test)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title, ds.challenge||'');
+    var y = deckHdr(slide, title, ds.challenge||'', taskId);
     [['UNDERSTAND',ds.understand],['FOCUSED PROBLEM',ds.define],['WINNING IDEA',ds.decide],['PROTOTYPE',ds.prototype],['CUSTOMER TEST RESULTS',ds.test]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  backlog: function(pptx, title, data){
+  backlog: function(pptx, title, data, taskId){
     var bl = data.backlog || {};
     if(!bl.top5) return false;
     // Bulleted lists at this font size fit roughly 12 lines in the 3.6in
@@ -5482,12 +5613,12 @@ var DECK_SLIDE_BUILDERS = {
     return pageCount;
   },
 
-  scoring: function(pptx, title, data){
+  scoring: function(pptx, title, data, taskId){
     var sc = data.scoring || {};
     var rows = sc.rows || [];
     if(!rows.length) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title, 'Score = Value / Cost  (1, 2, 4, 8, 16 scale)');
+    var y = deckHdr(slide, title, 'Score = Value / Cost  (1, 2, 4, 8, 16 scale)', taskId);
     var sorted = rows.slice().sort(function(a,b){ return (b.value/Math.max(b.cost,1)) - (a.value/Math.max(a.cost,1)); });
     slide.addText('Opportunity', { x:0.5, y:y, w:4.3, h:0.3, fontFace:'Open Sans SemiBold', fontSize:13, bold:true, color:DECK_TXT });
     slide.addText('Value', { x:4.9, y:y, w:1.2, h:0.3, fontFace:'Open Sans SemiBold', fontSize:13, bold:true, color:DECK_TXT, align:'center' });
@@ -5505,7 +5636,7 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  roadmap: function(pptx, title, data){
+  roadmap: function(pptx, title, data, taskId){
     var rm = data.roadmap || {};
     var rows = rm.rows || [];
     if(!rows.length) return false;
@@ -5535,34 +5666,34 @@ var DECK_SLIDE_BUILDERS = {
     return pageCount;
   },
 
-  engbalance: function(pptx, title, data){
+  engbalance: function(pptx, title, data, taskId){
     var eb = data.engbalance || {};
     if(!(eb.risk||eb.cuts||eb.fixed)) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     [['WHAT IS AT RISK',eb.risk],['WHAT CAN BE CUT',eb.cuts],['NON-NEGOTIABLE',eb.fixed],['DECISION LOG',eb.decisions]].forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.8); slide = r.slide; y = r.y;
     });
     return true;
   },
 
-  userstories: function(pptx, title, data){
+  userstories: function(pptx, title, data, taskId){
     var us = data.userstories || {};
     if(!us.stories) return false;
     var slide = pptx.addSlide();
-    var y0 = deckHdr(slide, title);
+    var y0 = deckHdr(slide, title, null, taskId);
     var lines = us.stories.split('\n').map(function(l){return l.trim();}).filter(Boolean).slice(0,20);
     slide.addText(deckBulletText(lines, 15), { x:0.5, y:y0, w:8.6, h:5.0-y0, valign:'top' });
     return true;
   },
 
-  conclusions: function(pptx, title, data){
+  conclusions: function(pptx, title, data, taskId){
     var co = data.conclusions || {};
     var interviews = co.interviews || [];
     var summary = co.summary || '';
     if(!summary && !interviews.length) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     if(summary){ var rs = deckFrowFlow(pptx, slide, title, 'OVERALL TREND / SUMMARY', summary, 0.5, y, 8.6, 1.0); slide = rs.slide; y = rs.y; }
     for(var i=0; i<Math.min(interviews.length,4); i++){
       var iv = interviews[i];
@@ -5575,7 +5706,7 @@ var DECK_SLIDE_BUILDERS = {
     return true;
   },
 
-  internalcheck: function(pptx, title, data){
+  internalcheck: function(pptx, title, data, taskId){
     var ic = data.internalcheck || {};
     var checked = Object.keys(ic).filter(function(k){ return ic[k]; });
     if(!checked.length) return false;
@@ -5584,19 +5715,19 @@ var DECK_SLIDE_BUILDERS = {
       'Helps users win','On roadmap for this year','Will still matter in two years',
       'Benefits most users','Resources available to support'];
     var slide = pptx.addSlide();
-    var y0 = deckHdr(slide, title);
+    var y0 = deckHdr(slide, title, null, taskId);
     var checkedSet = {}; checked.forEach(function(k){ checkedSet[k]=true; });
     var lines = questions.map(function(q,i){ return (checkedSet['q'+i] ? 'Yes -- ' : 'No -- ') + q; });
     slide.addText(deckBulletText(lines, 15), { x:0.5, y:y0, w:8.6, h:5.0-y0, valign:'top' });
     return true;
   },
 
-  hypothesis: function(pptx, title, data){
+  hypothesis: function(pptx, title, data, taskId){
     var hyp = data.hypothesis || {};
     var fields = [['PERSONA',hyp.persona],['THE PAIN',hyp.pain],['SOLUTION',hyp.solution],['EXPECTED OUTCOME',hyp.outcome],['TRADE-OFFS',hyp.tradeoffs]];
     if(!fields.some(function(f){return f[1];})) return false;
     var slide = pptx.addSlide();
-    var y = deckHdr(slide, title);
+    var y = deckHdr(slide, title, null, taskId);
     fields.forEach(function(pair){
       var r = deckFrowFlow(pptx, slide, title, pair[0], pair[1], 0.5, y, 8.6, 0.75); slide = r.slide; y = r.y;
     });
@@ -5606,7 +5737,16 @@ var DECK_SLIDE_BUILDERS = {
 
 var DECK_NOTES_MODALS = ['generic','notes','interviewqs','wireframes','rams','mvptypes','kano','methodology','sprint','kanban','agencyflags'];
 
+function isStepIncludedInDeck(taskId, data){
+  // Defaults to included whenever undefined, so projects that have never
+  // touched this checkbox behave exactly as before -- this only ever
+  // matters once someone explicitly unchecks a filled-in step.
+  var flag = data['stepIncluded_'+taskId];
+  return flag !== false;
+}
+
 function deckHasData(modal, taskId, data){
+  if(!isStepIncludedInDeck(taskId, data)) return false;
   if(DECK_NOTES_MODALS.indexOf(modal) >= 0){
     var nd = data['note_'+taskId] || {};
     return !!(nd.notes && String(nd.notes).trim());
