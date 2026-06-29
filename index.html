@@ -2524,12 +2524,66 @@ function exportAllData(){
 // would look like, using the same field/layout rules as generateDeckClientSide.
 // Refreshes on focusout (field blur), not on every keystroke.
 
+var PREVIEW_MAX_ROWS_HEIGHT_EM = 19.5; // matches the real deck's usable body height, in body-text em units
+
+function previewBuildSlideHTMLPages(title, tpl, rowSpecs){
+  // rowSpecs: [{label, val}], already filtered to non-empty values.
+  // Splits rows across multiple slide pages using the same line-count
+  // estimate as the real .pptx generator, so the live preview's slide
+  // boundaries genuinely match what the download will actually produce
+  // instead of always showing one (possibly very long) card per step.
+  var dotsHTML = tpl.showDots
+    ? '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
+      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
+      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>'
+    : '';
+
+  function rowHTML(label, val){
+    return '<div style="margin-bottom:.8em;"><div style="font-size:.69em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#'+tpl.txtColor+';margin-bottom:.12em;">'+esc(label)+'</div><div style="font-size:.875em;color:#'+tpl.txtColor+';line-height:1.45;">'+esc(val)+'</div></div>';
+  }
+
+  function wrapPage(pageTitle, rowsHTML){
+    return '<div class="preview-slide" style="padding:1.625em;box-sizing:border-box;">' +
+      '<div style="display:flex;align-items:center;gap:.375em;margin-bottom:.875em;">' +
+      dotsHTML +
+      '<span style="font-size:1.125em;font-weight:600;color:#'+tpl.accentColor+';font-family:inherit;margin-left:'+(tpl.showDots?'.375em':'0')+';">'+esc(pageTitle)+'</span>' +
+      '</div>' +
+      rowsHTML +
+      '</div>';
+  }
+
+  // ~95 characters per line at this width/font size (matches the real
+  // generator's per-inch estimate, adapted to the preview's em-based sizing).
+  var CHARS_PER_LINE = 95;
+  var pages = [];
+  var currentRows = '';
+  var usedHeight = 0;
+
+  rowSpecs.forEach(function(spec){
+    var estLines = Math.max(1, Math.ceil(String(spec.val).length / CHARS_PER_LINE));
+    var rowHeight = 1.0 + estLines * 0.95; // label + wrapped value, in em
+    if(usedHeight + rowHeight > PREVIEW_MAX_ROWS_HEIGHT_EM && currentRows){
+      pages.push(currentRows);
+      currentRows = '';
+      usedHeight = 0;
+    }
+    currentRows += rowHTML(spec.label, spec.val);
+    usedHeight += rowHeight;
+  });
+  if(currentRows) pages.push(currentRows);
+  if(!pages.length) return [];
+
+  return pages.map(function(rowsHTML, i){
+    return wrapPage(i === 0 ? title : title + ' (continued)', rowsHTML);
+  });
+}
+
 function previewSlideHTML(title, modal, data, taskId, templateId){
   var tpl = getProjectTemplate({ template: templateId });
-  var rows = [];
+  var rowSpecs = [];
   function pushRow(label, val){
     if(!val) return;
-    rows.push('<div style="margin-bottom:.8em;"><div style="font-size:.69em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#'+tpl.txtColor+';margin-bottom:.12em;">'+esc(label)+'</div><div style="font-size:.875em;color:#'+tpl.txtColor+';line-height:1.45;">'+esc(val)+'</div></div>');
+    rowSpecs.push({ label: label, val: val });
   }
 
   if(['generic','notes','interviewqs','wireframes','rams','mvptypes','kano','methodology','sprint','kanban','agencyflags'].indexOf(modal) >= 0 && modal !== 'rams'){
@@ -2554,21 +2608,8 @@ function previewSlideHTML(title, modal, data, taskId, templateId){
     }
   }
 
-  if(!rows.length) return null;
-
-  var dotsHTML = tpl.showDots
-    ? '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
-      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
-      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>'
-    : '';
-
-  return '<div class="preview-slide" style="padding:1.625em;box-sizing:border-box;">' +
-    '<div style="display:flex;align-items:center;gap:.375em;margin-bottom:.875em;">' +
-    dotsHTML +
-    '<span style="font-size:1.125em;font-weight:600;color:#'+tpl.accentColor+';font-family:inherit;margin-left:'+(tpl.showDots?'.375em':'0')+';">'+esc(title)+'</span>' +
-    '</div>' +
-    rows.join('') +
-    '</div>';
+  if(!rowSpecs.length) return [];
+  return previewBuildSlideHTMLPages(title, tpl, rowSpecs);
 }
 
 var previewSlideList = []; // [{html, title}] for the current project, in deck order
@@ -2582,24 +2623,10 @@ function buildPreviewCoverHTML(proj, tpl){
 }
 
 function buildPreviewFoundationHTML(foundation, tpl){
-  var dotsHTML = tpl.showDots
-    ? '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
-      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>' +
-      '<span style="display:inline-block;width:.44em;height:.44em;border-radius:50%;background:#'+tpl.accentColor+';"></span>'
-    : '';
-
-  var rows = PRODUCT_FOUNDATION_FIELDS.map(function(f){
-    if(!foundation[f.key]) return '';
-    return '<div style="margin-bottom:.8em;"><div style="font-size:.69em;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#'+tpl.txtColor+';margin-bottom:.12em;">'+esc(f.label)+'</div><div style="font-size:.875em;color:#'+tpl.txtColor+';line-height:1.45;">'+esc(foundation[f.key])+'</div></div>';
-  }).join('');
-
-  return '<div class="preview-slide" style="padding:1.625em;box-sizing:border-box;">' +
-    '<div style="display:flex;align-items:center;gap:.375em;margin-bottom:.875em;">' +
-    dotsHTML +
-    '<span style="font-size:1.125em;font-weight:600;color:#'+tpl.accentColor+';font-family:inherit;margin-left:'+(tpl.showDots?'.375em':'0')+';">Product Foundation</span>' +
-    '</div>' +
-    rows +
-    '</div>';
+  var rowSpecs = PRODUCT_FOUNDATION_FIELDS.filter(function(f){ return foundation[f.key]; })
+    .map(function(f){ return { label: f.label, val: foundation[f.key] }; });
+  if(!rowSpecs.length) return [];
+  return previewBuildSlideHTMLPages('Product Foundation', tpl, rowSpecs);
 }
 
 function buildPreviewSlideList(){
@@ -2620,7 +2647,10 @@ function buildPreviewSlideList(){
   var foundation = data.productFoundation || {};
   var foundationHasContent = PRODUCT_FOUNDATION_FIELDS.some(function(f){ return foundation[f.key] && String(foundation[f.key]).trim(); });
   if(foundationHasContent){
-    slides.push({ html: buildPreviewFoundationHTML(foundation, tpl), title: 'Product Foundation', taskId: null, modal: '__foundation__' });
+    var foundationPages = buildPreviewFoundationHTML(foundation, tpl);
+    foundationPages.forEach(function(pageHtml, i){
+      slides.push({ html: pageHtml, title: 'Product Foundation', taskId: null, modal: '__foundation__' });
+    });
   }
 
   phases.forEach(function(ph){
@@ -2635,8 +2665,12 @@ function buildPreviewSlideList(){
         renderedShared[modal] = true;
       }
 
-      var html = previewSlideHTML(taskTitle, modal, data, taskId, proj.template);
-      if(html) slides.push({ html: html, title: taskTitle, taskId: taskId, modal: modal });
+      // A step's content can now span multiple preview pages, just like
+      // the real download, when it's too long for one slide.
+      var pages = previewSlideHTML(taskTitle, modal, data, taskId, proj.template);
+      pages.forEach(function(pageHtml){
+        slides.push({ html: pageHtml, title: taskTitle, taskId: taskId, modal: modal });
+      });
     });
   });
 
