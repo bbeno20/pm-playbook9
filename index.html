@@ -376,6 +376,23 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
   .phase-card{flex:0 0 220px;padding:1.75rem 1.25rem;}
   .phase-card-title{font-size:1.35rem;}
 }
+@media (min-width:900px){
+  .phase-carousel{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    overflow-x:visible;
+    padding:0 5vw 8px;
+    max-width:1300px;
+    margin:0 auto;
+  }
+  .phase-card{flex:none;padding:1.75rem 1rem;}
+  .phase-card-title{font-size:1.25rem;}
+  .phase-card-sub{font-size:.78rem;}
+  #phase-swipe-hint{display:none;}
+}
+@media (max-width:480px){
+  .signup-name-row{flex-direction:column;}
+}
 </style>
 </head>
 <body>
@@ -460,7 +477,7 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
           <div class="phase-card-sub" style="color:#3A2F8A;">GTM &amp; launch</div>
         </div>
       </div>
-      <div style="display:flex;justify-content:center;gap:14px;margin-top:1.25rem;color:var(--faint);font-size:.72rem;">
+      <div id="phase-swipe-hint" style="display:flex;justify-content:center;gap:14px;margin-top:1.25rem;color:var(--faint);font-size:.72rem;">
         <span>&larr;</span><span>swipe to explore</span><span>&rarr;</span>
       </div>
     </section>
@@ -630,12 +647,12 @@ header p{font-size:.8rem;color:var(--muted);font-weight:300}
       <div id="auth-view-signup" style="display:none;">
         <h2 style="font-family:'DM Serif Display',serif;font-size:1.75rem;font-weight:400;letter-spacing:-.02em;margin:0 0 .4rem;color:var(--text);">Create your account</h2>
         <p style="font-size:.85rem;color:var(--muted);margin:0 0 1.5rem;line-height:1.6;">Free to use. Verify your email once and you won't need to again.</p>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div class="signup-name-row" style="display:flex;gap:8px;margin-bottom:10px;">
           <input type="text" id="signup-firstname" placeholder="First name" autocomplete="given-name"
-            style="flex:1;padding:13px 14px;border:1px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:14px;box-sizing:border-box;outline:none;background:var(--bg);"
+            style="flex:1;min-width:0;padding:13px 14px;border:1px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:14px;box-sizing:border-box;outline:none;background:var(--bg);"
             onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border-strong)'">
           <input type="text" id="signup-lastname" placeholder="Last name" autocomplete="family-name"
-            style="flex:1;padding:13px 14px;border:1px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:14px;box-sizing:border-box;outline:none;background:var(--bg);"
+            style="flex:1;min-width:0;padding:13px 14px;border:1px solid var(--border-strong);border-radius:10px;font-family:inherit;font-size:14px;box-sizing:border-box;outline:none;background:var(--bg);"
             onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border-strong)'">
         </div>
         <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"
